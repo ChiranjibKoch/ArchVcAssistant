@@ -1,0 +1,17 @@
+[Unit]
+Description=ArchVcAssistant — multi-account Telegram VC bot
+After=network-online.target mongodb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=archvc
+WorkingDirectory=/opt/ArchVcAssistant
+ExecStart=/opt/ArchVcAssistant/venv/bin/python archd.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/var/log/archvc.log
+StandardError=append:/var/log/archvc.log
+
+[Install]
+WantedBy=multi-user.target
