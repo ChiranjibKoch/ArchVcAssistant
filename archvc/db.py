@@ -1,0 +1,41 @@
+from motor.motor_asyncio import AsyncIOMotorClient
+
+
+class DB:
+    def __init__(self, uri: str, name: str) -> None:
+        self._c = AsyncIOMotorClient(uri, tz_aware=True)
+        self._db = self._c[name]
+
+    async def ready(self) -> None:
+        await self._c.admin.command("ping")
+        d = self._db
+        await d.sudoers.create_index("tg_id", unique=True)
+        await d.accounts.create_index("account_id", unique=True)
+        await d.accounts.create_index("owner")
+        await d.accounts.create_index("state")
+        await d.proxies.create_index("pid", unique=True)
+        await d.proxies.create_index("health")
+        await d.logs.create_index("at", expireAfterSeconds=30 * 86400)
+        await d.logins.create_index("uid", unique=True)
+        await d.logins.create_index("at", expireAfterSeconds=300)
+
+    @property
+    def sudoers(self):  return self._db.sudoers
+
+    @property
+    def accounts(self): return self._db.accounts
+
+    @property
+    def proxies(self):  return self._db.proxies
+
+    @property
+    def logs(self):     return self._db.logs
+
+    @property
+    def logins(self):   return self._db.logins
+
+    @property
+    def settings(self): return self._db.settings
+
+    def close(self) -> None:
+        self._c.close()

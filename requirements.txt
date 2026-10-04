@@ -1,0 +1,9 @@
+kurigram==2.2.26
+py-tgcalls==2.2.12
+motor
+tgcrypto-rs
+uvloop
+yt-dlp
+python-dotenv
+aiohttp
+cryptography
