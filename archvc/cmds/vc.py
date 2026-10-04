@@ -1,5 +1,7 @@
 from pyrogram import filters
 
+from archvc.intx import vcreact
+
 
 def wire(app) -> None:
     bot = app.bot
@@ -17,8 +19,11 @@ def wire(app) -> None:
         res = await app.calls.join(chat)
         ok = sum(1 for v in res.values() if v == "ok")
         fail = len(res) - ok
-        await m.reply("Join: " + str(ok) + " ok / " + str(fail) + " fail")
-        await app.log.event("\u25a3 \u1d20\u1d04 \u1d0a\u1d0f\u026a\u0274\n  chat: " + str(chat) + "\n  ok: " + str(ok) + " | fail: " + str(fail) + "\n  by: " + str(uid))
+        await m.reply(f"Join: {ok} ok / {fail} fail")
+        await app.log.event(
+            f"▣ ᴠᴄ ᴊᴏɪɴ\n  chat: {chat}\n"
+            f"  ok: {ok} | fail: {fail}\n  by: {uid}"
+        )
 
     @bot.on_message(filters.command("leavevc") & filters.private)
     async def _l(_, m):
@@ -31,7 +36,26 @@ def wire(app) -> None:
         chat = _chat(parts[1])
         res = await app.calls.leave(chat)
         ok = sum(1 for v in res.values() if v == "ok")
-        await m.reply("Leave: " + str(ok) + " ok / " + str(len(res) - ok) + " fail")
+        await m.reply(f"Leave: {ok} ok / {len(res) - ok} fail")
+
+    @bot.on_message(filters.command("vcreact") & filters.private)
+    async def _vr(_, m):
+        uid = m.from_user.id
+        if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
+            return
+        parts = m.text.split()
+        if len(parts) < 3:
+            return await m.reply("Usage: /vcreact <chat> <emoji>")
+        chat = _chat(parts[1])
+        emoji = parts[2]
+        res = await vcreact.burst(
+            app.herd, chat, emoji, cache=app.calls.input_calls
+        )
+        await m.reply(f"VC reactions: {res['ok']} ok / {res['fail']} fail")
+        await app.log.event(
+            f"▣ ᴠᴄ ʀᴇᴀᴄᴛɪᴏɴ\n  chat: {chat}\n  emoji: {emoji}\n"
+            f"  ok: {res['ok']} | fail: {res['fail']}\n  by: {uid}"
+        )
 
     @bot.on_message(filters.command("play") & filters.private)
     async def _p(_, m):
@@ -46,10 +70,10 @@ def wire(app) -> None:
         try:
             url = await media.resolve_async(parts[2])
         except Exception as e:
-            return await m.reply("Resolve failed: " + str(e))
+            return await m.reply(f"Resolve failed: {e}")
         res = await app.calls.play_all(chat, url)
         ok = sum(1 for v in res.values() if v == "ok")
-        await m.reply("Play: " + str(ok) + " ok / " + str(len(res) - ok) + " fail")
+        await m.reply(f"Play: {ok} ok / {len(res) - ok} fail")
 
     @bot.on_message(filters.command("pause") & filters.private)
     async def _pa(_, m):

@@ -11,6 +11,7 @@ class Calls:
         self.herd = herd
         self.q = queue.Queue(workers)
         self.live: dict[str, PyTgCalls] = {}
+        self.input_calls: dict[str, object] = {}
 
     async def spawn(self) -> None:
         for aid, client in self.herd.live.items():
@@ -28,12 +29,14 @@ class Calls:
             except Exception:
                 pass
         self.live.clear()
+        self.input_calls.clear()
 
     async def join(self, chat, mute: bool = True) -> dict:
         jobs = [(aid, _join(c, chat, mute)) for aid, c in self.live.items()]
         return await self.q.fire(jobs)
 
     async def leave(self, chat) -> dict:
+        self.input_calls.clear()
         jobs = [(aid, _leave(c, chat)) for aid, c in self.live.items()]
         return await self.q.fire(jobs)
 
