@@ -21,10 +21,18 @@ def wire(app) -> None:
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply(
-                "Usage: /addaccount +91xxxxxxxxxx\n"
+                "Usage: /addaccount 919876543210\n"
+                "       /addaccount +919876543210\n\n"
                 "OTP will arrive — send it as next message."
             )
         await m.reply(await app.login.begin(uid, parts[1]))
+
+    @bot.on_message(filters.command("retry") & filters.private)
+    async def _retry(_, m):
+        uid = m.from_user.id
+        if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
+            return
+        await m.reply(await app.login.retry(uid))
 
     @bot.on_message(filters.command("addsession") & filters.private)
     async def _imp(_, m):

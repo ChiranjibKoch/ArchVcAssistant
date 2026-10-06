@@ -2,6 +2,21 @@ from pyrogram import filters
 
 from archvc import kbd
 
+WELCOME_VIDEO = "https://telegra.ph/file/36221d40afde82941ffff.mp4"
+
+CAPTION = """◈ ᴀʀᴄʜ
+ᴠᴄ ᴀꜱꜱɪꜱᴛᴀɴᴛ
+━━━━━━━━━━━━━━━━━━━━
+
+ᴍᴜʟᴛɪ-ᴀᴄᴄᴏᴜɴᴛ ᴛᴇʟᴇɢʀᴀᴍ ᴠᴄ ᴀᴜᴛᴏᴍᴀᴛɪᴏɴ
+
+  🟢  {accounts} ᴀᴄᴄᴏᴜɴᴛꜱ
+  🌐  {proxies} ᴘʀᴏxɪᴇꜱ
+  🎙  {sessions} ꜱᴇꜱꜱɪᴏɴꜱ
+
+━━━━━━━━━━━━━━━━━━━━
+{role}"""
+
 
 def wire(app) -> None:
     bot = app.bot
@@ -11,24 +26,33 @@ def wire(app) -> None:
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
             return
-        await m.reply(await _root(app, uid), reply_markup=kbd.root(app.sudo.is_owner(uid)))
+        s = await app.fleet.stats()
+        text = CAPTION.format(
+            accounts=app.herd.size,
+            proxies=s["up"],
+            sessions=app.calls.count() if app.calls else 0,
+            role="ᴏᴡɴᴇʀ" if app.sudo.is_owner(uid) else "ꜱᴜᴅᴏ",
+        )
+        await m.reply_video(
+            video=WELCOME_VIDEO,
+            caption=text,
+            reply_markup=kbd.root(app.sudo.is_owner(uid)),
+        )
 
     @bot.on_message(filters.command("menu") & filters.private)
     async def _menu(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
             return
-        await m.reply(await _root(app, uid), reply_markup=kbd.root(app.sudo.is_owner(uid)))
-
-
-async def _root(app, uid: int) -> str:
-    return (
-        "◈ ᴀʀᴄʜ\n"
-        "ᴠᴄ ᴀꜱꜱɪꜱᴛᴀɴᴛ\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  🟢  {app.herd.size} ᴀᴄᴄᴏᴜɴᴛꜱ ᴏɴʟɪɴᴇ\n"
-        f"  🌐  {await app.fleet.alive()} ᴘʀᴏxɪᴇꜱ ᴀʟɪᴠᴇ\n"
-        f"  🎙  {app.calls.count() if app.calls else 0} ᴠᴄ ꜱᴇꜱꜱɪᴏɴꜱ\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        + ("ᴏᴡɴᴇʀ" if app.sudo.is_owner(uid) else "ꜱᴜᴅᴏ")
-    )
+        s = await app.fleet.stats()
+        text = CAPTION.format(
+            accounts=app.herd.size,
+            proxies=s["up"],
+            sessions=app.calls.count() if app.calls else 0,
+            role="ᴏᴡɴᴇʀ" if app.sudo.is_owner(uid) else "ꜱᴜᴅᴏ",
+        )
+        await m.reply_video(
+            video=WELCOME_VIDEO,
+            caption=text,
+            reply_markup=kbd.root(app.sudo.is_owner(uid)),
+        )

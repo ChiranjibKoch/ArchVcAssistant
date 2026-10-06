@@ -11,9 +11,12 @@ from pyrogram.errors import (
     SessionPasswordNeeded,
 )
 
+MAX_OTP_TRIES = 3
+MAX_PWD_TRIES = 3
+
 
 def _norm(raw: str) -> str:
-    raw = raw.strip()
+    raw = raw.strip().replace(" ", "").replace("-", "")
     if not raw.startswith("+"):
         raw = "+" + raw
     return raw
@@ -43,11 +46,11 @@ class Flow:
     async def begin(self, uid: int, raw_phone: str) -> str:
         phone = _norm(raw_phone)
         if not _valid(phone):
-            return "Invalid phone. Format: +91xxxxxxxxxx"
+            return "Invalid phone. Example: 919876543210 or +919876543210"
 
         count = await self.db.accounts.count_documents({"state": {"$ne": "off"}})
         if count >= self.max:
-            return f"Account limit reached ({self.max}). Remove some first."
+            return f"Account limit reached ({self.max})."
 
         existing = await self.db.accounts.find_one(
             {"phone": phone, "state": {"$ne": "off"}}
@@ -83,11 +86,17 @@ class Flow:
             "phone": phone,
             "client": c,
             "hash": sent.phone_code_hash,
+            "otp_tries": 0,
+            "pwd_tries": 0,
         }
         await self.log.event(
             f"◈ ᴀᴄᴄᴏᴜɴᴛ ᴀᴅᴅ ꜱᴛᴀʀᴛᴇᴅ\n  phone: {phone}\n  by: {uid}"
         )
-        return f"OTP sent to {phone}. Send the code as a message (spaces ok):"
+        return (
+            f"OTP sent to {phone}.\n"
+            "Send the code as a message (spaces ok).\n"
+            f"You have {MAX_OTP_TRIES} tries. /cancel to abort."
+        )
 
     async def feed(self, uid: int, text: str) -> str:
         st = self.pending.get(uid)
@@ -112,14 +121,21 @@ class Flow:
                 phone_code=code,
             )
         except PhoneCodeInvalid:
-            self.cancel(uid)
-            return "OTP invalid. /addaccount to retry."
+            st["otp_tries"] += 1
+            left = MAX_OTP_TRIES - st["otp_tries"]
+            if left <= 0:
+                self.cancel(uid)
+                return "OTP invalid. No tries left. /addaccount to retry."
+            return f"OTP invalid. {left} tries left. Send again."
         except PhoneCodeExpired:
             self.cancel(uid)
             return "OTP expired. /addaccount to retry."
         except SessionPasswordNeeded:
             st["step"] = "password"
-            return "2FA enabled. Send your password as a message:"
+            return (
+                f"2FA enabled. Send your password.\n"
+                f"You have {MAX_PWD_TRIES} tries."
+            )
         except Exception as e:
             self.cancel(uid)
             return f"Sign-in failed: {e}"
@@ -131,12 +147,24 @@ class Flow:
         try:
             await c.check_password(password)
         except PasswordHashInvalid:
-            self.cancel(uid)
-            return "Invalid password. /addaccount to retry."
+            st["pwd_tries"] += 1
+            left = MAX_PWD_TRIES - st["pwd_tries"]
+            if left <= 0:
+                self.cancel(uid)
+                return "Password invalid. No tries left. /addaccount to retry."
+            return f"Invalid password. {left} tries left. Send again."
         except Exception as e:
             self.cancel(uid)
             return f"2FA failed: {e}"
         return await self._finish(uid)
+
+    async def retry(self, uid: int) -> str:
+        st = self.pending.get(uid)
+        if not st:
+            return "No active login."
+        phone = st["phone"]
+        self.cancel(uid)
+        return await self.begin(uid, phone)
 
     async def _finish(self, uid: int) -> str:
         st = self.pending.pop(uid, None)
@@ -149,9 +177,7 @@ class Flow:
         phone = getattr(me, "phone_number", "") or st["phone"]
         name = f"{me.first_name or ''} {me.last_name or ''}".strip() or me.username or "Unknown"
         aid, is_new = await self.herd.adopt(
-            uid,
-            phone,
-            session,
+            uid, phone, session,
             api_id=self.conf.api_id,
             api_hash=self.conf.api_hash,
             tg_name=name,
@@ -190,9 +216,7 @@ class Flow:
         phone = getattr(me, "phone_number", "") or ""
         name = f"{me.first_name or ''} {me.last_name or ''}".strip() or me.username or "Unknown"
         aid, is_new = await self.herd.adopt(
-            uid,
-            phone,
-            session,
+            uid, phone, session,
             api_id=self.conf.api_id,
             api_hash=self.conf.api_hash,
             tg_name=name,

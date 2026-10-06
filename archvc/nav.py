@@ -222,10 +222,12 @@ def mount(app) -> None:
                 kbd.back("acc"),
             )
         elif data == "acc:add:o":
-            nav.set(uid, "acc:phone")
+            nav.state.pop(uid, None)
             await _edit(
                 cb,
-                "📱 ᴘʜᴏɴᴇ + ᴏᴛᴘ\n━━━━━━━━━━━━━━━━━━━━\n\nꜱᴇɴᴅ ᴛʜᴇ ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ:",
+                "📱 ᴘʜᴏɴᴇ ʟᴏɢɪɴ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ: <code>/addaccount +91xxxxxxxxxx</code>\n\n"
+                "ᴏᴛᴘ ᴡɪʟʟ ᴀʀʀɪᴠᴇ — ꜱᴇɴᴅ ᴀꜱ ɴᴇxᴛ ᴍᴇꜱꜱᴀɢᴇ.",
                 kbd.back("acc"),
             )
         elif data == "acc:refresh":

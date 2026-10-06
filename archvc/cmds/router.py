@@ -32,12 +32,7 @@ def wire(app) -> None:
 
         if state == "acc:session":
             await m.reply(await app.login.import_(uid, text))
-        elif state == "acc:phone":
-            if not _phone(text):
-                app.nav.set(uid, state)
-                return await m.reply("Bad phone. Send in +91xxxxxxxxxx format.")
-            await app.login.start(uid, text)
-            await m.reply("OTP sent. Send /otp <code>")
+
         elif state == "vc:join":
             chat = _chat(text)
             await m.reply("Joining...")
@@ -49,11 +44,13 @@ def wire(app) -> None:
                 f"▣ ᴠᴄ ᴊᴏɪɴ\n  chat: {chat}\n"
                 f"  ok: {ok} | fail: {fail}\n  by: {uid}"
             )
+
         elif state == "vc:leave":
             chat = _chat(text)
             res = await app.calls.leave(chat)
             ok = sum(1 for v in res.values() if v == "ok")
             await m.reply(f"Leave: {ok} ok / {len(res) - ok} fail")
+
         elif state == "intx:rx":
             parts = text.split()
             if len(parts) < 2:
@@ -62,22 +59,6 @@ def wire(app) -> None:
             from archvc.intx import react
             res = await react.burst(app.herd, parts[0], parts[1])
             await m.reply(f"Reactions: {res['ok']} ok / {res['fail']} fail")
-        elif state == "px:add":
-            from archvc.prox.fleet import _row
-            r = _row(text)
-            if not r:
-                app.nav.set(uid, state)
-                return await m.reply("Bad proxy URL. Send tg://proxy? link.")
-            await app.db.proxies.update_one(
-                {"pid": r["pid"]},
-                {
-                    "$set": {"url": r["url"], "kind": r["kind"], "secret": r["secret"]},
-                    "$setOnInsert": {"health": "unknown", "lent": [], "checked": None},
-                },
-                upsert=True,
-            )
-            await app.fleet.stats(force=True)
-            await m.reply(f"Added proxy: {r['pid']}")
 
         elif state == "intx:views":
             parts = text.split()
@@ -94,9 +75,22 @@ def wire(app) -> None:
             res = await views.boost(app.herd, parts[0], n, react=emoji)
             await m.reply(f"Views: {res['ok']} ok / {res['fail']} fail")
 
-
-def _phone(s: str) -> bool:
-    return s.startswith("+") and s[1:].isdigit() and 8 <= len(s) - 1 <= 15
+        elif state == "px:add":
+            from archvc.prox.fleet import _row
+            r = _row(text)
+            if not r:
+                app.nav.set(uid, state)
+                return await m.reply("Bad proxy URL. Send tg://proxy? link.")
+            await app.db.proxies.update_one(
+                {"pid": r["pid"]},
+                {
+                    "$set": {"url": r["url"], "kind": r["kind"], "secret": r["secret"]},
+                    "$setOnInsert": {"health": "unknown", "lent": [], "checked": None},
+                },
+                upsert=True,
+            )
+            await app.fleet.stats(force=True)
+            await m.reply(f"Added proxy: {r['pid']}")
 
 
 def _chat(s: str):

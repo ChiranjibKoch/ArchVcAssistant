@@ -25,15 +25,25 @@ def dang(label, data):
 
 def root(is_owner):
     rows = [
-        [succ("➕ ᴀᴅᴅ", "nav:acc:add"), prim("📋 ᴀᴄᴄᴏᴜɴᴛꜱ", "nav:acc"),
-         succ("🎙 ᴊᴏɪɴ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ", "nav:vc:leave")],
-        [prim("🔥 ʀx", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views"),
-         succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘʀᴏxʏ", "nav:px")],
+        [succ("➕ ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", "nav:acc:add"), prim("📋 ᴀᴄᴄᴏᴜɴᴛꜱ", "nav:acc")],
+        [succ("🎙 ᴊᴏɪɴ ᴠᴄ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ ᴠᴄ", "nav:vc:leave")],
+        [prim("🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views")],
+        [succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘʀᴏxʏ", "nav:px")],
         [prim("📜 ʟᴏɢꜱ", "nav:sys:logs"), prim("⚙ ꜱʏꜱᴛᴇᴍ", "nav:sys")],
     ]
     if is_owner:
         rows.append([prim("👥 ꜱᴜᴅᴏ", "nav:sd")])
     return InlineKeyboardMarkup(rows)
+
+
+def proxy():
+    return InlineKeyboardMarkup([
+        [prim("🔄 ʀᴇꜰʀᴇꜱʜ", "px:refresh"), succ("✅ ᴄʜᴇᴄᴋ", "px:check")],
+        [succ("➕ ᴀᴅᴅ", "px:add"), dang("🗑 ᴄʟᴇᴀɴ", "px:clean")],
+        [prim("📊 ꜱᴛᴀᴛꜱ", "px:stats"), prim("📋 ʟɪꜱᴛ", "px:list")],
+        [prim("🌐 ꜰᴀᴋᴇᴛʟꜱ", "px:faketls"), prim("🔵 ᴍᴛᴘʀᴏᴛᴏ", "px:mtproto")],
+        [prim("◀ ʙᴀᴄᴋ", "nav:root")],
+    ])
 
 
 def accounts():
@@ -56,22 +66,8 @@ def voice():
 
 def interaction():
     return InlineKeyboardMarkup([
-        [prim("🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx"),
-         prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views")],
-        [prim("◀ ʙᴀᴄᴋ", "nav:root")],
-    ])
-
-
-def proxy():
-    return InlineKeyboardMarkup([
-        [prim("🔄 ʀᴇꜰʀᴇꜱʜ", "px:refresh"),
-         succ("✅ ᴄʜᴇᴄᴋ", "px:check"),
-         succ("➕ ᴀᴅᴅ", "px:add"),
-         dang("🗑 ᴄʟᴇᴀɴ", "px:clean")],
-        [prim("📊 ꜱᴛᴀᴛꜱ", "px:stats"),
-         prim("📋 ʟɪꜱᴛ", "px:list"),
-         prim("🌐 ꜰᴀᴋᴇᴛʟꜱ", "px:faketls"),
-         prim("🔵 ᴍᴛᴘʀᴏᴛᴏ", "px:mtproto")],
+        [prim("🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx")],
+        [prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views")],
         [prim("◀ ʙᴀᴄᴋ", "nav:root")],
     ])
 
