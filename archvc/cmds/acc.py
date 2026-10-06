@@ -4,6 +4,29 @@ from pyrogram import filters
 def wire(app) -> None:
     bot = app.bot
 
+    @bot.on_message(filters.command("generate") & filters.private)
+    async def _gen(_, m):
+        uid = m.from_user.id
+        if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
+            return
+        if app.generate.active(uid):
+            app.generate.cancel(uid)
+        msg = await app.generate.begin(uid)
+        await m.reply(msg)
+
+    @bot.on_message(filters.command("cancel") & filters.private)
+    async def _cancel(_, m):
+        uid = m.from_user.id
+        if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
+            return
+        if app.generate.active(uid):
+            app.generate.cancel(uid)
+            return await m.reply("Cancelled.")
+        if app.nav.peek(uid):
+            app.nav.take(uid)
+            return await m.reply("Cancelled.")
+        await m.reply("Nothing to cancel.")
+
     @bot.on_message(filters.command("addsession") & filters.private)
     async def _imp(_, m):
         uid = m.from_user.id
@@ -54,11 +77,13 @@ def wire(app) -> None:
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
             return
         ids = list(app.herd.live.keys())[:60]
-        body = "\ud83d\udccb \u1d00\u1d04\u1d04\u1d0f\u1d1c\u0274\u1d1b\u0455\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
-        body += "  \ud83d\udfe2 " + str(app.herd.size) + " online\n"
-        body += "  \ud83d\udd34 " + str(app.herd.sick) + " sick\n"
-        body += "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
-        body += "\n".join("  \u2022 " + str(i) for i in ids) if ids else "  (none)"
+        body = (
+            f"📋 ᴀᴄᴄᴏᴜɴᴛꜱ\n━━━━━━━━━━━━━━━━━━━━\n"
+            f"  🟢 {app.herd.size} online\n"
+            f"  🔴 {app.herd.sick} sick\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            + ("\n".join(f"  • {i}" for i in ids) if ids else "  (none)")
+        )
         await m.reply(body)
 
 

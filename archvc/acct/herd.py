@@ -29,8 +29,8 @@ class Herd:
         proxy = _tg_proxy(row["proxy"]) if row.get("proxy") else None
         c = Client(
             f"a-{row['account_id']}",
-            api_id=self.conf.api_id,
-            api_hash=self.conf.api_hash,
+            api_id=row.get("api_id") or self.conf.api_id,
+            api_hash=row.get("api_hash") or self.conf.api_hash,
             session_string=sess,
             proxy=proxy,
             in_memory=True,
@@ -44,6 +44,8 @@ class Herd:
         phone: str,
         session: str,
         proxy: str | None = None,
+        api_id: int | None = None,
+        api_hash: str | None = None,
     ) -> tuple[str, bool]:
         aid = store.fingerprint(session)
         existing = await self.db.accounts.find_one({"account_id": aid})
@@ -51,7 +53,15 @@ class Herd:
         if existing:
             await self.db.accounts.update_one(
                 {"account_id": aid},
-                {"$set": {"owner": owner, "phone": phone, "state": "up"}},
+                {
+                    "$set": {
+                        "owner": owner,
+                        "phone": phone,
+                        "state": "up",
+                        "api_id": api_id or existing.get("api_id"),
+                        "api_hash": api_hash or existing.get("api_hash"),
+                    }
+                },
             )
             if aid not in self.live:
                 row = await self.db.accounts.find_one({"account_id": aid})
@@ -68,6 +78,8 @@ class Herd:
             "session": store.seal(session),
             "proxy": proxy,
             "state": "up",
+            "api_id": api_id,
+            "api_hash": api_hash,
         })
         row = await self.db.accounts.find_one({"account_id": aid})
         await self._mount(row)

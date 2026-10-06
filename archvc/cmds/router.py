@@ -12,6 +12,13 @@ def wire(app) -> None:
         text = (m.text or "").strip()
         if text.startswith("/"):
             return
+
+        if app.generate.active(uid):
+            res = await app.generate.feed(uid, text)
+            if res:
+                await m.reply(res)
+            return
+
         state = app.nav.peek(uid)
         if not state:
             return

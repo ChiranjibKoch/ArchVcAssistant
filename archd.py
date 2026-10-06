@@ -6,7 +6,7 @@ import sys
 import uvloop
 
 from archvc import conf, db, logs, nav, sudo
-from archvc.acct import herd, login
+from archvc.acct import generate, herd, login
 from archvc.cmds import wire
 from archvc.prox import fleet
 from archvc.vc import calls
@@ -22,6 +22,7 @@ class Arch:
         self.fleet = None
         self.herd = None
         self.login = None
+        self.generate = None
         self.calls = None
         self.nav = None
 
@@ -52,6 +53,9 @@ class Arch:
         )
 
         self.login = login.Flow(self.db, self.conf, self.herd, self.log)
+        self.generate = generate.Generate(
+            self.db, self.conf, self.herd, self.log
+        )
         self.calls = calls.Calls(self.herd, self.conf.vc_workers)
         await self.calls.spawn()
 
