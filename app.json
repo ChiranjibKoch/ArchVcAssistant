@@ -1,0 +1,61 @@
+{
+  "name": "ArchVcAssistant",
+  "description": "Multi-account Telegram voice chat automation bot",
+  "keywords": [
+    "telegram",
+    "voice-chat",
+    "pyrogram",
+    "pytgcalls",
+    "mongo"
+  ],
+  "repository": "https://github.com/ChiranjibKoch/ArchVcAssistant",
+  "stack": "container",
+  "env": {
+    "API_ID": {
+      "description": "Telegram API ID from my.telegram.org",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "Telegram API hash from my.telegram.org",
+      "required": true
+    },
+    "BOT_TOKEN": {
+      "description": "Bot token from @BotFather",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "Owner numeric Telegram ID",
+      "required": true
+    },
+    "LOG_GROUP_ID": {
+      "description": "Log group or channel numeric ID",
+      "required": true
+    },
+    "SESSION_KEY": {
+      "description": "Fernet key for account session encryption. Generate: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"",
+      "required": true
+    },
+    "MONGO_URI": {
+      "description": "MongoDB connection string (Atlas recommended)",
+      "required": true
+    },
+    "MONGO_DB": {
+      "description": "MongoDB database name",
+      "value": "archvc",
+      "required": false
+    },
+    "VC_WORKERS": {
+      "description": "Concurrent VC join workers",
+      "value": "20",
+      "required": false
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "buildpacks": [],
+  "addons": []
+}
