@@ -4,8 +4,6 @@ from pytgcalls.types import MediaStream
 
 from archvc.vc import queue
 
-SILENT = MediaStream("")
-
 
 class Calls:
     def __init__(self, herd, workers: int) -> None:
@@ -61,7 +59,7 @@ class Calls:
             raise KeyError(f"no live call for {aid}")
         client = self.clients.get(aid)
         await _ensure_member(client, chat)
-        await _do_join(c, chat)
+        await c.play(chat)
         if mute:
             try:
                 await c.mute(chat)
@@ -129,17 +127,10 @@ async def _ensure_member(client, chat) -> None:
         pass
 
 
-async def _do_join(call, chat) -> None:
-    try:
-        await call.join_group_call(chat)
-    except TypeError:
-        await call.join_group_call(chat, SILENT)
-
-
 def _join(call, client, chat, mute):
     async def _f():
         await _ensure_member(client, chat)
-        await _do_join(call, chat)
+        await call.play(chat)
         if mute:
             try:
                 await call.mute(chat)
@@ -178,11 +169,11 @@ def _audio(call, chat, src):
 
 def _pause(call, chat):
     async def _f():
-        await call.pause_stream(chat)
+        await call.pause(chat)
     return _f
 
 
 def _resume(call, chat):
     async def _f():
-        await call.resume_stream(chat)
+        await call.resume(chat)
     return _f
