@@ -46,6 +46,8 @@ class Herd:
         proxy: str | None = None,
         api_id: int | None = None,
         api_hash: str | None = None,
+        tg_name: str | None = None,
+        tg_id: int | None = None,
     ) -> tuple[str, bool]:
         aid = store.fingerprint(session)
         existing = await self.db.accounts.find_one({"account_id": aid})
@@ -60,6 +62,8 @@ class Herd:
                         "state": "up",
                         "api_id": api_id or existing.get("api_id"),
                         "api_hash": api_hash or existing.get("api_hash"),
+                        "tg_name": tg_name or existing.get("tg_name"),
+                        "tg_id": tg_id or existing.get("tg_id"),
                     }
                 },
             )
@@ -80,6 +84,8 @@ class Herd:
             "state": "up",
             "api_id": api_id,
             "api_hash": api_hash,
+            "tg_name": tg_name,
+            "tg_id": tg_id,
         })
         row = await self.db.accounts.find_one({"account_id": aid})
         await self._mount(row)

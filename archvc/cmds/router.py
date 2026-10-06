@@ -13,6 +13,12 @@ def wire(app) -> None:
         if text.startswith("/"):
             return
 
+        if app.login.active(uid):
+            res = await app.login.feed(uid, text)
+            if res:
+                await m.reply(res)
+            return
+
         if app.generate.active(uid):
             res = await app.generate.feed(uid, text)
             if res:
