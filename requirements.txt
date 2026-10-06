@@ -1,5 +1,5 @@
 kurigram==2.2.26
-py-tgcalls==2.2.12
+py-tgcalls==2.3.3
 motor
 tgcrypto-rs
 uvloop
