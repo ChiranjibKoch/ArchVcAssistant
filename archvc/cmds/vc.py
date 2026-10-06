@@ -19,7 +19,14 @@ def wire(app) -> None:
         res = await app.calls.join(chat)
         ok = sum(1 for v in res.values() if v == "ok")
         fail = len(res) - ok
-        await m.reply(f"Join: {ok} ok / {fail} fail")
+        body = f"Join: {ok} ok / {fail} fail"
+        errs = {}
+        for v in res.values():
+            if v.startswith("fail:"):
+                errs[v[5:]] = errs.get(v[5:], 0) + 1
+        for e, n in list(errs.items())[:3]:
+            body += f"\n  {n}x  {e[:150]}"
+        await m.reply(body)
         await app.log.event(
             f"▣ ᴠᴄ ᴊᴏɪɴ\n  chat: {chat}\n"
             f"  ok: {ok} | fail: {fail}\n  by: {uid}"

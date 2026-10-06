@@ -17,7 +17,8 @@ class Queue:
                     await fn()
                     out[k] = "ok"
                 except Exception as e:
-                    out[k] = f"fail:{type(e).__name__}"
+                    msg = f"{type(e).__name__}: {e}"
+                    out[k] = f"fail:{msg[:240]}"
                     self.retry.append((k, fn))
                 await asyncio.sleep(0.05)
 

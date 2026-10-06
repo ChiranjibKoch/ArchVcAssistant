@@ -1,3 +1,4 @@
+from pyrogram.errors import UserAlreadyParticipant
 from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream
 
@@ -11,6 +12,8 @@ class Calls:
         self.herd = herd
         self.q = queue.Queue(workers)
         self.live: dict[str, PyTgCalls] = {}
+        self.clients: dict[str, object] = {}
+        self.joined: dict[str, set[int]] = {}
         self.input_calls: dict[str, object] = {}
 
     async def spawn(self) -> None:
@@ -26,6 +29,7 @@ class Calls:
             c = PyTgCalls(client)
             await c.start()
             self.live[aid] = c
+            self.clients[aid] = client
         except Exception:
             pass
 
@@ -36,16 +40,45 @@ class Calls:
             except Exception:
                 pass
         self.live.clear()
+        self.clients.clear()
         self.input_calls.clear()
+        self.joined.clear()
 
     async def join(self, chat, mute: bool = True) -> dict:
-        jobs = [(aid, _join(c, chat, mute)) for aid, c in self.live.items()]
-        return await self.q.fire(jobs)
+        jobs = [
+            (aid, _join(c, self.clients.get(aid), chat, mute))
+            for aid, c in self.live.items()
+        ]
+        res = await self.q.fire(jobs)
+        for aid, status in res.items():
+            if status == "ok":
+                self.joined.setdefault(aid, set()).add(chat)
+        return res
+
+    async def join_one(self, aid: str, chat, mute: bool = True) -> None:
+        c = self.live.get(aid)
+        if not c:
+            raise KeyError(f"no live call for {aid}")
+        client = self.clients.get(aid)
+        await _ensure_member(client, chat)
+        await _do_join(c, chat)
+        if mute:
+            try:
+                await c.mute(chat)
+            except Exception:
+                pass
+        self.joined.setdefault(aid, set()).add(chat)
 
     async def leave(self, chat) -> dict:
-        self.input_calls.clear()
         jobs = [(aid, _leave(c, chat)) for aid, c in self.live.items()]
-        return await self.q.fire(jobs)
+        res = await self.q.fire(jobs)
+        for aid, status in res.items():
+            if status == "ok":
+                s = self.joined.get(aid)
+                if s:
+                    s.discard(chat)
+        self.input_calls.clear()
+        return res
 
     async def mute(self, chat) -> dict:
         jobs = [(aid, _mute(c, chat)) for aid, c in self.live.items()]
@@ -85,9 +118,28 @@ class Calls:
         return len(self.live)
 
 
-def _join(call, chat, mute):
-    async def _f():
+async def _ensure_member(client, chat) -> None:
+    if client is None:
+        return
+    try:
+        await client.join_chat(chat)
+    except UserAlreadyParticipant:
+        pass
+    except Exception:
+        pass
+
+
+async def _do_join(call, chat) -> None:
+    try:
+        await call.join_group_call(chat)
+    except TypeError:
         await call.join_group_call(chat, SILENT)
+
+
+def _join(call, client, chat, mute):
+    async def _f():
+        await _ensure_member(client, chat)
+        await _do_join(call, chat)
         if mute:
             try:
                 await call.mute(chat)
