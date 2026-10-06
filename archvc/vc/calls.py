@@ -15,12 +15,19 @@ class Calls:
 
     async def spawn(self) -> None:
         for aid, client in self.herd.live.items():
-            try:
-                c = PyTgCalls(client)
-                await c.start()
-                self.live[aid] = c
-            except Exception:
+            if aid in self.live:
                 continue
+            await self.spawn_one(aid, client)
+
+    async def spawn_one(self, aid: str, client) -> None:
+        if aid in self.live:
+            return
+        try:
+            c = PyTgCalls(client)
+            await c.start()
+            self.live[aid] = c
+        except Exception:
+            pass
 
     async def kill(self) -> None:
         for c in self.live.values():

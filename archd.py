@@ -56,6 +56,7 @@ class Arch:
         self.generate = generate.Generate(self.herd, self.log)
         self.calls = calls.Calls(self.herd, self.conf.vc_workers)
         await self.calls.spawn()
+        self.herd.on_new = self.calls.spawn_one
 
         wire(self)
         nav.mount(self)

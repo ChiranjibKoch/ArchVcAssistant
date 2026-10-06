@@ -44,6 +44,7 @@ class Herd:
         self.live: dict[str, Client] = {}
         self.size = 0
         self.sick = 0
+        self.on_new = None
 
     async def graze(self) -> None:
         async for row in self.db.accounts.find({"state": {"$ne": "off"}}):
@@ -75,6 +76,11 @@ class Herd:
         )
         await c.start()
         self.live[row["account_id"]] = c
+        if self.on_new:
+            try:
+                await self.on_new(row["account_id"], c)
+            except Exception:
+                pass
 
     async def adopt(
         self,
