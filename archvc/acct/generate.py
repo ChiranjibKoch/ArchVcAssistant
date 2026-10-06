@@ -10,36 +10,27 @@ from pyrogram.errors import (
     SessionPasswordNeeded,
 )
 
-ERROR = (
-    "⚠ ᴇʀʀᴏʀ\n"
-    "━━━━━━━━━━━━━━━━━━━━\n"
-    "  {}\n\n"
-    "  ʀᴇᴘᴏʀᴛ ᴛᴏ @ArchAssociation"
-)
-
 
 class Generate:
-    def __init__(self, db, conf, herd, log) -> None:
-        self.db = db
-        self.conf = conf
+    def __init__(self, herd, log) -> None:
         self.herd = herd
         self.log = log
-        self.state: dict[int, dict] = {}
+        self.states: dict[int, dict] = {}
 
     def active(self, uid: int) -> bool:
-        return uid in self.state
+        return uid in self.states
 
     def cancel(self, uid: int) -> None:
-        s = self.state.pop(uid, None)
+        s = self.states.pop(uid, None)
         if s and s.get("client"):
-            asyncio.create_task(_disconnect(s["client"]))
+            asyncio.create_task(_quiet_disconnect(s["client"]))
 
-    async def begin(self, uid: int) -> str:
-        self.state[uid] = {"step": "api_id"}
+    def begin(self, uid: int) -> str:
+        self.states[uid] = {"step": "api_id"}
         return "ꜱᴇɴᴅ ʏᴏᴜʀ ᴀᴘɪ_ɪᴅ"
 
     async def feed(self, uid: int, text: str) -> str:
-        s = self.state.get(uid)
+        s = self.states.get(uid)
         if not s:
             return ""
 
@@ -49,15 +40,15 @@ class Generate:
             try:
                 s["api_id"] = int(text)
             except ValueError:
-                self.state.pop(uid, None)
-                return "API_ID must be an integer. Use /generate to restart."
+                self.states.pop(uid, None)
+                return "ᴀᴘɪ_ɪᴅ ᴍᴜꜱᴛ ʙᴇ ᴀɴ ɪɴᴛᴇɢᴇʀ. ᴜꜱᴇ /generate ᴛᴏ ʀᴇꜱᴛᴀʀᴛ."
             s["step"] = "api_hash"
             return "ꜱᴇɴᴅ ʏᴏᴜʀ ᴀᴘɪ_ʜᴀꜱʜ"
 
         if step == "api_hash":
             s["api_hash"] = text
             s["step"] = "phone"
-            return "ꜱᴇɴᴅ ᴘʜᴏɴᴇ ᴡɪᴛʜ ᴄᴏᴜɴᴛʀʏ ᴄᴏᴅᴇ\n  ᴇxᴀᴍᴘʟᴇ: +628xxxxxxx"
+            return "ꜱᴇɴᴅ ᴘʜᴏɴᴇ ᴡɪᴛʜ ᴄᴏᴜɴᴛʀʏ ᴄᴏᴅᴇ\nᴇxᴀᴍᴘʟᴇ: +628xxxxxxx"
 
         if step == "phone":
             s["phone"] = text
@@ -73,14 +64,14 @@ class Generate:
                 s["client"] = c
                 s["code_hash"] = sent.phone_code_hash
             except ApiIdInvalid:
-                self.state.pop(uid, None)
-                return "API_ID and API_HASH combination is invalid."
+                self.states.pop(uid, None)
+                return "ᴀᴘɪ_ɪᴅ ᴀɴᴅ ᴀᴘɪ_ʜᴀꜱʜ ᴄᴏᴍʙɪɴᴀᴛɪᴏɴ ɪꜱ ɪɴᴠᴀʟɪᴅ."
             except PhoneNumberInvalid:
-                self.state.pop(uid, None)
-                return "Phone number is invalid."
+                self.states.pop(uid, None)
+                return "ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ ɪꜱ ɪɴᴠᴀʟɪᴅ."
             except Exception as e:
-                self.state.pop(uid, None)
-                return ERROR.format(e)
+                self.states.pop(uid, None)
+                return f"ᴇʀʀᴏʀ: {e}"
             s["step"] = "otp"
             return "ꜱᴇɴᴅ ᴛʜᴇ ᴏᴛᴘ ʟɪᴋᴇ ᴛʜɪꜱ: 1 2 3 4 5"
 
@@ -90,17 +81,17 @@ class Generate:
             try:
                 await c.sign_in(s["phone"], s["code_hash"], code)
             except PhoneCodeInvalid:
-                self.state.pop(uid, None)
-                return "OTP is invalid."
+                self.states.pop(uid, None)
+                return "ᴏᴛᴘ ɪꜱ ɪɴᴠᴀʟɪᴅ."
             except PhoneCodeExpired:
-                self.state.pop(uid, None)
-                return "OTP is expired."
+                self.states.pop(uid, None)
+                return "ᴏᴛᴘ ɪꜱ ᴇxᴘɪʀᴇᴅ."
             except SessionPasswordNeeded:
                 s["step"] = "password"
-                return "ᴛᴡᴏ-ꜱᴛᴇᴘ ᴠᴇʀɪꜰɪᴄᴀᴛɪᴏɴ ᴇɴᴀʙʟᴇᴅ\n  ꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀꜱꜱᴡᴏʀᴅ"
+                return "ᴛᴡᴏ-ꜱᴛᴇᴘ ᴠᴇʀɪꜰɪᴄᴀᴛɪᴏɴ ᴇɴᴀʙʟᴇᴅ\nꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀꜱꜱᴡᴏʀᴅ"
             except Exception as e:
-                self.state.pop(uid, None)
-                return ERROR.format(e)
+                self.states.pop(uid, None)
+                return f"ᴇʀʀᴏʀ: {e}"
             return await self._finish(uid)
 
         if step == "password":
@@ -108,23 +99,23 @@ class Generate:
             try:
                 await c.check_password(text)
             except PasswordHashInvalid:
-                self.state.pop(uid, None)
-                return "Invalid password."
+                self.states.pop(uid, None)
+                return "ɪɴᴠᴀʟɪᴅ ᴘᴀꜱꜱᴡᴏʀᴅ."
             except Exception as e:
-                self.state.pop(uid, None)
-                return ERROR.format(e)
+                self.states.pop(uid, None)
+                return f"ᴇʀʀᴏʀ: {e}"
             return await self._finish(uid)
 
         return ""
 
     async def _finish(self, uid: int) -> str:
-        s = self.state.pop(uid, None)
+        s = self.states.pop(uid, None)
         if not s:
             return ""
         c = s["client"]
         session = await c.export_session_string()
         me = await c.get_me()
-        await _disconnect(c)
+        await _quiet_disconnect(c)
         phone = getattr(me, "phone_number", "") or s["phone"]
         aid, is_new = await self.herd.adopt(
             uid, phone, session,
@@ -144,7 +135,7 @@ class Generate:
         )
 
 
-async def _disconnect(c) -> None:
+async def _quiet_disconnect(c) -> None:
     try:
         await c.disconnect()
     except Exception:

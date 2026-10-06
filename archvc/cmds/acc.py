@@ -11,8 +11,7 @@ def wire(app) -> None:
             return
         if app.generate.active(uid):
             app.generate.cancel(uid)
-        msg = await app.generate.begin(uid)
-        await m.reply(msg)
+        await m.reply(app.generate.begin(uid))
 
     @bot.on_message(filters.command("cancel") & filters.private)
     async def _cancel(_, m):
@@ -35,8 +34,7 @@ def wire(app) -> None:
         parts = m.text.split(maxsplit=1)
         if len(parts) < 2:
             return await m.reply("Usage: /addsession <string>")
-        res = await app.login.import_(uid, parts[1].strip())
-        await m.reply(res)
+        await m.reply(await app.login.import_(uid, parts[1].strip()))
 
     @bot.on_message(filters.command("addotp") & filters.private)
     async def _otp(_, m):
@@ -57,8 +55,7 @@ def wire(app) -> None:
         parts = m.text.split()
         if len(parts) < 2:
             return
-        res = await app.login.otp(uid, parts[1])
-        await m.reply(res)
+        await m.reply(await app.login.otp(uid, parts[1]))
 
     @bot.on_message(filters.command("2fa") & filters.private)
     async def _t(_, m):
@@ -68,8 +65,7 @@ def wire(app) -> None:
         parts = m.text.split(maxsplit=1)
         if len(parts) < 2:
             return
-        res = await app.login.pwd(uid, parts[1])
-        await m.reply(res)
+        await m.reply(await app.login.pwd(uid, parts[1]))
 
     @bot.on_message(filters.command("accounts") & filters.private)
     async def _ls(_, m):

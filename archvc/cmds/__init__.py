@@ -1,4 +1,4 @@
-from archvc.cmds import acc, intx, router, start, sudo, sys, vc
+from archvc.cmds import acc, intx, proxy, router, start, sudo, sys, vc
 
 
 def wire(app) -> None:
@@ -7,5 +7,6 @@ def wire(app) -> None:
     acc.wire(app)
     vc.wire(app)
     intx.wire(app)
+    proxy.wire(app)
     sys.wire(app)
     router.wire(app)

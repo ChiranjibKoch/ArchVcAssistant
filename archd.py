@@ -53,6 +53,7 @@ class Arch:
         )
 
         self.login = login.Flow(self.db, self.conf, self.herd, self.log)
+        self.generate = generate.Generate(self.herd, self.log)
         self.generate = generate.Generate(
             self.db, self.conf, self.herd, self.log
         )

@@ -1,4 +1,7 @@
+import asyncio
+
 from pyrogram import filters
+from pyrogram.errors import MessageNotModified
 
 from archvc import kbd
 
@@ -6,9 +9,9 @@ ROOT = """◈ ᴀʀᴄʜ
 ᴠᴄ ᴀꜱꜱɪꜱᴛᴀɴᴛ
 ━━━━━━━━━━━━━━━━━━━━
 
-  🟢  {accounts} ᴀᴄᴄᴏᴜɴᴛꜱ ᴏɴʟɪɴᴇ
-  🌐  {proxies} ᴘʀᴏxɪᴇꜱ ᴀʟɪᴠᴇ
-  🎙  {sessions} ᴠᴄ ꜱᴇꜱꜱɪᴏɴꜱ
+  🟢  {accounts} ᴀᴄᴄᴏᴜɴᴛꜱ
+  🌐  {proxies} ᴘʀᴏxɪᴇꜱ
+  🎙  {sessions} ꜱᴇꜱꜱɪᴏɴꜱ
 
 ━━━━━━━━━━━━━━━━━━━━
 {role}"""
@@ -37,10 +40,22 @@ INTX = """◈ ɪɴᴛᴇʀᴀᴄᴛɪᴏɴ
 
   🔥  ʀᴇᴀᴄᴛɪᴏɴꜱ  ·  ᴇᴍᴏᴊɪ ᴏɴ ᴘᴏꜱᴛ
   👁  ᴠɪᴇᴡꜱ     ·  ᴘᴏꜱᴛ ᴠɪᴇᴡ ʙᴏᴏꜱᴛ
-  🎵  ᴀᴜᴅɪᴏ     ·  ᴀᴜᴅɪᴏ ɪɴ ᴠᴄ
 
 ━━━━━━━━━━━━━━━━━━━━
-ꜱᴇɴᴅ ᴀ ᴄᴏᴍᴍᴀɴᴅ ʟɪᴋᴇ /rx /views /play"""
+ꜱᴇɴᴅ ᴀ ᴄᴏᴍᴍᴀɴᴅ ʟɪᴋᴇ /rx /views"""
+
+PROXY = """◈ ᴘʀᴏxʏ ꜰʟᴇᴇᴛ
+━━━━━━━━━━━━━━━━━━━━
+
+  🟢  {up} ᴀʟɪᴠᴇ
+  🔴  {down} ᴅᴇᴀᴅ
+  ⚪  {unknown} ᴜɴᴋɴᴏᴡɴ
+
+  🌐  ꜰᴀᴋᴇᴛʟꜱ  {fake_tls}
+  🔵  ᴍᴛᴘʀᴏᴛᴏ  {mtproto}
+
+━━━━━━━━━━━━━━━━━━━━
+ᴛᴏᴛᴀʟ  {total}"""
 
 SYS = """✦ ꜱʏꜱᴛᴇᴍ
 ━━━━━━━━━━━━━━━━━━━━
@@ -66,6 +81,13 @@ class Nav:
         return self.state.get(uid)
 
 
+async def _edit(cb, text: str, markup) -> None:
+    try:
+        await cb.edit_message_text(text, reply_markup=markup)
+    except MessageNotModified:
+        pass
+
+
 def mount(app) -> None:
     bot = app.bot
     nav = Nav()
@@ -76,115 +98,184 @@ def mount(app) -> None:
         uid = cb.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
             return await cb.answer("not authorized", show_alert=False)
+
         data = cb.data[len(kbd.NS):]
-        await cb.answer()
+        asyncio.create_task(_safe_answer(cb))
         owner = app.sudo.is_owner(uid)
 
         if data == "nav:root":
             nav.state.pop(uid, None)
-            await cb.edit_message_text(
-                await _root_text(app, uid),
-                reply_markup=kbd.root(owner),
-            )
+            s = await app.fleet.stats()
+            await _edit(cb, ROOT.format(
+                accounts=app.herd.size,
+                proxies=s["up"],
+                sessions=app.calls.count() if app.calls else 0,
+                role="ᴏᴡɴᴇʀ" if owner else "ꜱᴜᴅᴏ",
+            ), kbd.root(owner))
+
         elif data == "nav:acc":
             nav.state.pop(uid, None)
-            await cb.edit_message_text(
-                await _acc_text(app),
-                reply_markup=kbd.accounts(),
-            )
+            await _edit(cb, await _acc_text(app), kbd.accounts())
+
         elif data == "nav:vc":
             nav.state.pop(uid, None)
-            await cb.edit_message_text(
-                await _vc_text(app),
-                reply_markup=kbd.voice(),
-            )
+            await _edit(cb, await _vc_text(app), kbd.voice())
+
         elif data == "nav:intx":
             nav.state.pop(uid, None)
-            await cb.edit_message_text(INTX, reply_markup=kbd.interaction())
+            await _edit(cb, INTX, kbd.interaction())
+
+        elif data == "nav:px":
+            nav.state.pop(uid, None)
+            await _edit(cb, await _px_text(app), kbd.proxy())
+
         elif data == "nav:sys":
             nav.state.pop(uid, None)
-            await cb.edit_message_text(
-                await _sys_text(app),
-                reply_markup=kbd.system(owner),
-            )
+            await _edit(cb, await _sys_text(app), kbd.system(owner))
+
         elif data == "nav:sd" and owner:
             nav.state.pop(uid, None)
-            await cb.edit_message_text(
+            await _edit(
+                cb,
                 "👥 ꜱᴜᴅᴏ\n━━━━━━━━━━━━━━━━━━━━",
-                reply_markup=kbd.sudo(),
+                kbd.sudo(),
+            )
+
+        elif data == "px:refresh":
+            await _edit(
+                cb,
+                "🔄 ʀᴇꜰʀᴇꜱʜɪɴɢ...\n━━━━━━━━━━━━━━━━━━━━",
+                kbd.back("px"),
+            )
+            await app.fleet.refresh()
+            await _edit(cb, await _px_text(app, force=True), kbd.proxy())
+
+        elif data == "px:check":
+            await _edit(
+                cb,
+                "✅ ᴄʜᴇᴄᴋɪɴɢ...\n━━━━━━━━━━━━━━━━━━━━",
+                kbd.back("px"),
+            )
+            await app.fleet._probe_all()
+            await _edit(cb, await _px_text(app, force=True), kbd.proxy())
+
+        elif data == "px:clean":
+            n = await app.fleet.clean()
+            await _edit(
+                cb,
+                f"🗑 ᴄʟᴇᴀɴᴇᴅ  {n} ᴅᴇᴀᴅ ᴘʀᴏxɪᴇꜱ\n━━━━━━━━━━━━━━━━━━━━",
+                kbd.back("px"),
+            )
+
+        elif data == "px:stats":
+            await _edit(cb, await _px_text(app), kbd.proxy())
+
+        elif data == "px:list":
+            rows = await app.db.proxies.find(
+                {}, {"pid": 1, "kind": 1, "health": 1}
+            ).sort("health", 1).limit(20).to_list(None)
+            lines = ["📋 ᴘʀᴏxʏ ʟɪꜱᴛ", "━━━━━━━━━━━━━━━━━━━━"]
+            for r in rows:
+                icon = {"up": "🟢", "down": "🔴"}.get(r.get("health"), "⚪")
+                kind = "ꜰ" if r.get("kind") == "fake_tls" else "ᴍ"
+                lines.append(f"  {icon} {kind}  {r['pid'][:12]}")
+            if not rows:
+                lines.append("  (none)")
+            await _edit(cb, "\n".join(lines), kbd.back("px"))
+
+        elif data == "px:faketls":
+            n = await app.db.proxies.count_documents({"kind": "fake_tls"})
+            await _edit(
+                cb,
+                f"🌐 ꜰᴀᴋᴇᴛʟꜱ\n━━━━━━━━━━━━━━━━━━━━\n\n  ᴄᴏᴜɴᴛ: {n}",
+                kbd.back("px"),
+            )
+
+        elif data == "px:mtproto":
+            n = await app.db.proxies.count_documents({"kind": "mtproto"})
+            await _edit(
+                cb,
+                f"🔵 ᴍᴛᴘʀᴏᴛᴏ\n━━━━━━━━━━━━━━━━━━━━\n\n  ᴄᴏᴜɴᴛ: {n}",
+                kbd.back("px"),
+            )
+
+        elif data == "px:add":
+            nav.set(uid, "px:add")
+            await _edit(
+                cb,
+                "➕ ᴀᴅᴅ ᴘʀᴏxʏ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴀ ᴛɢ://ᴘʀᴏxʏ? ʟɪɴᴋ:",
+                kbd.back("px"),
             )
 
         elif data == "nav:acc:add":
-            await cb.edit_message_text(
+            await _edit(
+                cb,
                 "➕ ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ\n━━━━━━━━━━━━━━━━━━━━\n\nᴄʜᴏᴏꜱᴇ ᴀ ᴍᴇᴛʜᴏᴅ:",
-                reply_markup=kbd.accounts(),
+                kbd.accounts(),
             )
         elif data == "acc:add:s":
             nav.set(uid, "acc:session")
-            await cb.edit_message_text(
-                "🔑 ꜱᴇꜱꜱɪᴏɴ ɪᴍᴘᴏʀᴛ\n━━━━━━━━━━━━━━━━━━━━\n\n"
-                "ꜱᴇɴᴅ ᴛʜᴇ ꜱᴇꜱꜱɪᴏɴ ꜱᴛʀɪɴɢ:",
-                reply_markup=kbd.back("acc"),
+            await _edit(
+                cb,
+                "🔑 ꜱᴇꜱꜱɪᴏɴ ɪᴍᴘᴏʀᴛ\n━━━━━━━━━━━━━━━━━━━━\n\nꜱᴇɴᴅ ᴛʜᴇ ꜱᴇꜱꜱɪᴏɴ ꜱᴛʀɪɴɢ:",
+                kbd.back("acc"),
             )
         elif data == "acc:add:o":
             nav.set(uid, "acc:phone")
-            await cb.edit_message_text(
-                "📱 ᴘʜᴏɴᴇ + ᴏᴛᴘ\n━━━━━━━━━━━━━━━━━━━━\n\n"
-                "ꜱᴇɴᴅ ᴛʜᴇ ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ (+91...):",
-                reply_markup=kbd.back("acc"),
+            await _edit(
+                cb,
+                "📱 ᴘʜᴏɴᴇ + ᴏᴛᴘ\n━━━━━━━━━━━━━━━━━━━━\n\nꜱᴇɴᴅ ᴛʜᴇ ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ:",
+                kbd.back("acc"),
             )
         elif data == "acc:refresh":
-            await cb.edit_message_text(
-                await _acc_text(app),
-                reply_markup=kbd.accounts(),
-            )
+            await _edit(cb, await _acc_text(app), kbd.accounts())
 
         elif data == "nav:vc:join":
             nav.set(uid, "vc:join")
-            await cb.edit_message_text(
-                "🎙 ᴊᴏɪɴ ᴠᴄ\n━━━━━━━━━━━━━━━━━━━━\n\n"
-                "ꜱᴇɴᴅ ᴄʜᴀᴛ ɪᴅ ᴏʀ ɪɴᴠɪᴛᴇ ʟɪɴᴋ:",
-                reply_markup=kbd.back("vc"),
+            await _edit(
+                cb,
+                "🎙 ᴊᴏɪɴ ᴠᴄ\n━━━━━━━━━━━━━━━━━━━━\n\nꜱᴇɴᴅ ᴄʜᴀᴛ ɪᴅ ᴏʀ ɪɴᴠɪᴛᴇ ʟɪɴᴋ:",
+                kbd.back("vc"),
             )
         elif data == "nav:vc:leave":
             nav.set(uid, "vc:leave")
-            await cb.edit_message_text(
-                "🔇 ʟᴇᴀᴠᴇ ᴠᴄ\n━━━━━━━━━━━━━━━━━━━━\n\n"
-                "ꜱᴇɴᴅ ᴄʜᴀᴛ ɪᴅ:",
-                reply_markup=kbd.back("vc"),
+            await _edit(
+                cb,
+                "🔇 ʟᴇᴀᴠᴇ ᴠᴄ\n━━━━━━━━━━━━━━━━━━━━\n\nꜱᴇɴᴅ ᴄʜᴀᴛ ɪᴅ:",
+                kbd.back("vc"),
             )
         elif data == "vc:play":
             nav.set(uid, "vc:play")
-            await cb.edit_message_text(
+            await _edit(
+                cb,
                 "🎵 ᴀᴜᴅɪᴏ\n━━━━━━━━━━━━━━━━━━━━\n\n"
-                "ꜰᴏʀᴍᴀᴛ: <code>/play &lt;chat&gt; &lt;source&gt;</code>\n"
-                "ꜱᴏᴜʀᴄᴇ: ʏᴛ ʟɪɴᴋ, ᴜʀʟ, ᴏʀ ʟᴏᴄᴀʟ ᴘᴀᴛʜ",
-                reply_markup=kbd.back("vc"),
+                "ꜰᴏʀᴍᴀᴛ: <code>/play &lt;chat&gt; &lt;source&gt;</code>",
+                kbd.back("vc"),
             )
-
         elif data == "nav:intx:rx":
             nav.set(uid, "intx:rx")
-            await cb.edit_message_text(
+            await _edit(
+                cb,
                 "🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ\n━━━━━━━━━━━━━━━━━━━━\n\n"
                 "ꜰᴏʀᴍᴀᴛ: <code>/rx &lt;post_url&gt; &lt;emoji&gt;</code>",
-                reply_markup=kbd.back("intx"),
+                kbd.back("intx"),
             )
         elif data == "nav:intx:views":
             nav.set(uid, "intx:views")
-            await cb.edit_message_text(
+            await _edit(
+                cb,
                 "👁 ᴠɪᴇᴡꜱ\n━━━━━━━━━━━━━━━━━━━━\n\n"
-                "ꜰᴏʀᴍᴀᴛ: <code>/views &lt;post_url&gt; &lt;count&gt; [emoji]</code>",
-                reply_markup=kbd.back("intx"),
+                "ꜰᴏʀᴍᴀᴛ: <code>/views &lt;post_url&gt; &lt;count&gt;</code>",
+                kbd.back("intx"),
             )
 
 
-async def _root_text(app, uid: int) -> str:
-    return ROOT.format(
-        accounts=app.herd.size,
-        proxies=await app.fleet.alive(),
-        sessions=app.calls.count() if app.calls else 0,
-        role="ᴏᴡɴᴇʀ" if app.sudo.is_owner(uid) else "ꜱᴜᴅᴏ",
-    )
+async def _safe_answer(cb) -> None:
+    try:
+        await cb.answer()
+    except Exception:
+        pass
 
 
 async def _acc_text(app) -> str:
@@ -199,13 +290,17 @@ async def _vc_text(app) -> str:
     return VC.format(active=active, joined=app.herd.size, chat="—")
 
 
+async def _px_text(app, force: bool = False) -> str:
+    s = await app.fleet.stats(force=force)
+    return PROXY.format(**s)
+
+
 async def _sys_text(app) -> str:
-    px_live = await app.fleet.alive()
-    px_total = await app.db.proxies.count_documents({})
+    s = await app.fleet.stats()
     return SYS.format(
         up=app.herd.size,
         sick=app.herd.sick,
-        px_live=px_live,
-        px_total=px_total,
+        px_live=s["up"],
+        px_total=s["total"],
         sessions=app.calls.count() if app.calls else 0,
     )
