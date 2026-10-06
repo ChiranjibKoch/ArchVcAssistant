@@ -1,7 +1,8 @@
-from archvc.cmds import acc, intx, router, sudo, sys, vc
+from archvc.cmds import acc, intx, router, start, sudo, sys, vc
 
 
 def wire(app) -> None:
+    start.wire(app)
     sudo.wire(app)
     acc.wire(app)
     vc.wire(app)
