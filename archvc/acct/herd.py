@@ -71,6 +71,7 @@ class Herd:
             system_version=dev["system_version"],
             app_version=dev["app_version"],
             in_memory=True,
+            no_updates=True,
         )
         await c.start()
         self.live[row["account_id"]] = c
