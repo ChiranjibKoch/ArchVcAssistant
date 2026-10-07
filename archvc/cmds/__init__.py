@@ -5,6 +5,7 @@ from archvc.cmds import (
     approve_cmd,
     autoview_cmd,
     copydb_cmd,
+    help_cmd,
     intx,
     proxy,
     rejoin,
@@ -20,6 +21,7 @@ from archvc.cmds import (
 _MODULES = [
     start, sudo, acc, vc, intx, proxy, sys, router,
     vcreact_cmd, rejoin, autoview_cmd, approve_cmd, copydb_cmd, wipe_cmd,
+    help_cmd,
 ]
 
 
