@@ -5,7 +5,7 @@ from pyrogram import filters
 def wire(app) -> None:
     bot = app.bot
 
-    @bot.on_message(filters.private & filters.text)
+    @bot.on_message(filters.private & filters.text, group=1)
     async def _input(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
