@@ -1,5 +1,6 @@
-from archvc.gate import deny_cb, deny_msg
 from pyrogram import filters
+
+from archvc.gate import deny_msg
 
 
 def wire(app) -> None:
@@ -18,7 +19,7 @@ def wire(app) -> None:
                     "✅ ᴀʟʟᴏᴡᴇᴅ\n"
                     "━━━━━━━━━━━━━━━━━━━━\n\n"
                     "  ᴇᴍᴘᴛʏ\n\n"
-                    "  ᴜꜱᴀɢᴇ: /allow &lt;chat_id&gt;"
+                    "  ᴜꜱᴀɢᴇ: /allow <chat_id>"
                 )
             lines = ["✅ ᴀʟʟᴏᴡᴇᴅ", "━━━━━━━━━━━━━━━━━━━━"]
             for c in allowed:
@@ -54,16 +55,15 @@ def wire(app) -> None:
                     "⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ\n"
                     "━━━━━━━━━━━━━━━━━━━━\n\n"
                     "  ɴᴏ ᴄʜᴀᴛꜱ ʀᴜɴɴɪɴɢ\n\n"
-                    "  /autoreact &lt;chat&gt; [sec]\n"
-                    "  /autoreact off\n"
-                    "  /autoreact off &lt;chat&gt;"
+                    "  /autoreact <chat>   ᴏɴ\n"
+                    "  /autoreact off      ꜱᴛᴏᴘ ᴀʟʟ"
                 )
             lines = ["⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ", "━━━━━━━━━━━━━━━━━━━━"]
             for c, cfg in st.items():
-                lines.append(f"  {c}  every {cfg['interval']}s")
+                lines.append(f"  {c}")
+                lines.append(f"    every {cfg['interval']}s · batch {cfg['batch']}")
             lines.append("")
-            lines.append("  /autoreact off       stop all")
-            lines.append("  /autoreact off <chat> stop one")
+            lines.append("  /autoreact off   ꜱᴛᴏᴘ ᴀʟʟ")
             return await m.reply("\n".join(lines))
 
         if parts[1] == "off":
@@ -75,19 +75,18 @@ def wire(app) -> None:
             return await m.reply(f"stopped: {chat}")
 
         chat = _chat(parts[1])
-        interval = 45
-        if len(parts) > 2:
-            try:
-                interval = int(parts[2])
-            except ValueError:
-                return await m.reply("interval must be a number (seconds)")
-        res = await app.autojoin.start(chat, interval)
+
+        if not await app.autojoin.is_allowed(chat):
+            await app.autojoin.allow(chat)
+
+        res = await app.autojoin.start(chat)
         if res == "started":
             await m.reply(
                 "⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ ᴏɴ\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 f"  chat:     {chat}\n"
-                f"  interval: {max(15, interval)}s"
+                "  interval: 60s\n"
+                "  batch:    15 accounts"
             )
         else:
             await m.reply(res)
