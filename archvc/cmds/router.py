@@ -33,6 +33,28 @@ def wire(app) -> None:
         if state == "acc:session":
             await m.reply(await app.login.import_(uid, text))
 
+        elif state == "aj:add":
+            chat = _chat(text)
+            n = app.watchdog.watch_chat(chat)
+            await m.reply(
+                f"👁 ᴀᴜᴛᴏᴊᴏɪɴ ᴏɴ\n"
+                f"  chat:     {chat}\n"
+                f"  watching: {n} accounts"
+            )
+
+        elif state == "ar:add":
+            chat = _chat(text)
+            res = await app.autojoin.start(chat, 45)
+            if res == "started":
+                await m.reply(f"⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ ᴏɴ\n  chat: {chat}\n  interval: 45s")
+            else:
+                await m.reply(res)
+
+        elif state == "ar:allow":
+            chat = _chat(text)
+            added = await app.autojoin.allow(chat)
+            await m.reply(f"✅ allowed: {chat}" if added else f"already allowed: {chat}")
+
         elif state == "vc:join":
             chat = _chat(text)
             await m.reply("Joining...")

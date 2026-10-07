@@ -272,6 +272,76 @@ def mount(app) -> None:
                 kbd.back("intx"),
             )
 
+        elif data == "nav:autojoin":
+            nav.state.pop(uid, None)
+            await _edit(cb, await _aj_text(app), kbd.autojoin())
+
+        elif data == "nav:autoreact":
+            nav.state.pop(uid, None)
+            await _edit(cb, await _ar_text(app), kbd.autoreact())
+
+        elif data == "aj:status":
+            await _edit(cb, await _aj_text(app), kbd.autojoin())
+
+        elif data == "aj:add":
+            nav.set(uid, "aj:add")
+            await _edit(
+                cb,
+                "👁 ᴀᴅᴅ ᴀᴜᴛᴏᴊᴏɪɴ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴄʜᴀᴛ ɪᴅ:",
+                kbd.back("autojoin"),
+            )
+
+        elif data == "aj:offall":
+            n = app.watchdog.unwatch_all()
+            await _edit(
+                cb,
+                "👁 ᴏꜰꜰ ᴀʟʟ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"  ᴅɪꜱᴀʙʟᴇᴅ {n} ᴄʜᴀᴛ(ꜱ)",
+                kbd.back("autojoin"),
+            )
+
+        elif data == "ar:status":
+            await _edit(cb, await _ar_text(app), kbd.autoreact())
+
+        elif data == "ar:add":
+            nav.set(uid, "ar:add")
+            await _edit(
+                cb,
+                "⚡ ᴇɴᴀʙʟᴇ ᴀᴜᴛᴏʀᴇᴀᴄᴛ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴄʜᴀᴛ ɪᴅ:",
+                kbd.back("autoreact"),
+            )
+
+        elif data == "ar:allow":
+            nav.set(uid, "ar:allow")
+            await _edit(
+                cb,
+                "✅ ᴀʟʟᴏᴡ ᴄʜᴀᴛ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴄʜᴀᴛ ɪᴅ:",
+                kbd.back("autoreact"),
+            )
+
+        elif data == "ar:offall":
+            n = await app.autojoin.stop_all()
+            await _edit(
+                cb,
+                "⚡ ᴏꜰꜰ ᴀʟʟ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"  ꜱᴛᴏᴘᴘᴇᴅ {n}",
+                kbd.back("autoreact"),
+            )
+
+        elif data == "ar:list":
+            allowed = await app.autojoin.allowed()
+            if not allowed:
+                body = "📋 ᴀʟʟᴏᴡᴇᴅ\n━━━━━━━━━━━━━━━━━━━━\n\n  ᴇᴍᴘᴛʏ"
+            else:
+                lines = ["📋 ᴀʟʟᴏᴡᴇᴅ", "━━━━━━━━━━━━━━━━━━━━"]
+                for c in allowed:
+                    lines.append(f"  • {c}")
+                body = "\n".join(lines)
+            await _edit(cb, body, kbd.back("autoreact"))
+
 
 async def _safe_answer(cb) -> None:
     try:

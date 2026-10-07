@@ -28,12 +28,30 @@ def root(is_owner):
         [succ("➕ ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", "nav:acc:add"), prim("📋 ᴀᴄᴄᴏᴜɴᴛꜱ", "nav:acc")],
         [succ("🎙 ᴊᴏɪɴ ᴠᴄ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ ᴠᴄ", "nav:vc:leave")],
         [prim("🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views")],
+        [succ("⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ", "nav:autoreact"), prim("👁 ᴀᴜᴛᴏᴊᴏɪɴ", "nav:autojoin")],
         [succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘʀᴏxʏ", "nav:px")],
         [prim("📜 ʟᴏɢꜱ", "nav:sys:logs"), prim("⚙ ꜱʏꜱᴛᴇᴍ", "nav:sys")],
     ]
     if is_owner:
         rows.append([prim("👥 ꜱᴜᴅᴏ", "nav:sd")])
     return InlineKeyboardMarkup(rows)
+
+
+def autojoin():
+    return InlineKeyboardMarkup([
+        [prim("👁 ꜱᴛᴀᴛᴜꜱ", "aj:status")],
+        [succ("➕ ᴀᴅᴅ ᴄʜᴀᴛ", "aj:add"), dang("🚫 ᴏꜰꜰ ᴀʟʟ", "aj:offall")],
+        [prim("◀ ʙᴀᴄᴋ", "nav:root")],
+    ])
+
+
+def autoreact():
+    return InlineKeyboardMarkup([
+        [prim("⚡ ꜱᴛᴀᴛᴜꜱ", "ar:status")],
+        [succ("➕ ᴇɴᴀʙʟᴇ", "ar:add"), dang("🚫 ᴏꜰꜰ ᴀʟʟ", "ar:offall")],
+        [succ("✅ ᴀʟʟᴏᴡ ᴄʜᴀᴛ", "ar:allow"), prim("📋 ᴀʟʟᴏᴡᴇᴅ", "ar:list")],
+        [prim("◀ ʙᴀᴄᴋ", "nav:root")],
+    ])
 
 
 def proxy():
