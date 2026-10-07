@@ -4,6 +4,7 @@ from pyrogram import filters
 from pyrogram.errors import MessageNotModified
 
 from archvc import kbd
+from archvc.gate import deny_cb, deny_msg
 
 ROOT = """◈ ᴀʀᴄʜ
 ᴠᴄ ᴀꜱꜱɪꜱᴛᴀɴᴛ
@@ -97,7 +98,7 @@ def mount(app) -> None:
     async def _route(_, cb):
         uid = cb.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return await cb.answer("not authorized", show_alert=False)
+            return await deny_cb(cb)
 
         data = cb.data[len(kbd.NS):]
         asyncio.create_task(_safe_answer(cb))

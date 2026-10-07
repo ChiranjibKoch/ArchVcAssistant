@@ -1,3 +1,4 @@
+from archvc.gate import deny_cb, deny_msg
 from pyrogram import filters
 
 
@@ -8,7 +9,7 @@ def wire(app) -> None:
     async def _gen(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         if app.generate.active(uid):
             app.generate.cancel(uid)
         await m.reply(app.generate.begin(uid))
@@ -17,7 +18,7 @@ def wire(app) -> None:
     async def _add(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply(
@@ -31,14 +32,14 @@ def wire(app) -> None:
     async def _retry(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         await m.reply(await app.login.retry(uid))
 
     @bot.on_message(filters.command("addsession") & filters.private)
     async def _imp(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split(maxsplit=1)
         if len(parts) < 2:
             return await m.reply("Usage: /addsession <string>")
@@ -48,7 +49,7 @@ def wire(app) -> None:
     async def _cancel(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         if app.generate.active(uid):
             app.generate.cancel(uid)
             return await m.reply("Cancelled.")
@@ -64,7 +65,7 @@ def wire(app) -> None:
     async def _ls(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         rows = await app.db.accounts.find(
             {"state": {"$ne": "off"}},
             {"account_id": 1, "phone": 1, "tg_name": 1, "state": 1},

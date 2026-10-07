@@ -1,3 +1,4 @@
+from archvc.gate import deny_cb, deny_msg
 from pyrogram import filters
 
 
@@ -8,7 +9,7 @@ def wire(app) -> None:
     async def _allow(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             allowed = await app.autojoin.allowed()
@@ -31,7 +32,7 @@ def wire(app) -> None:
     async def _disallow(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply("Usage: /disallow <chat_id>")
@@ -43,7 +44,7 @@ def wire(app) -> None:
     async def _auto(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
 
         if len(parts) < 2:

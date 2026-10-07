@@ -1,6 +1,7 @@
 from pyrogram import filters
 
 from archvc.intx import react, views
+from archvc.gate import deny_cb, deny_msg
 
 
 def wire(app) -> None:
@@ -10,7 +11,7 @@ def wire(app) -> None:
     async def _rx(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 3:
             return await m.reply("Usage: /rx <post_url> <emoji>")
@@ -23,7 +24,7 @@ def wire(app) -> None:
     async def _vw(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 3:
             return await m.reply("Usage: /views <post_url> <count> [emoji]")

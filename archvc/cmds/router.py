@@ -1,3 +1,4 @@
+from archvc.gate import deny_cb, deny_msg
 from pyrogram import filters
 
 
@@ -8,7 +9,7 @@ def wire(app) -> None:
     async def _input(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         text = (m.text or "").strip()
         if text.startswith("/"):
             return

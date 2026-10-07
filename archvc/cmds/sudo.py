@@ -1,3 +1,4 @@
+from archvc.gate import deny_cb, deny_msg
 from pyrogram import filters
 
 
@@ -7,7 +8,7 @@ def wire(app) -> None:
     @bot.on_message(filters.command("addsudo") & filters.private)
     async def _add(_, m):
         if not app.sudo.is_owner(m.from_user.id):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply("Usage: /addsudo <tg_id>")
@@ -22,7 +23,7 @@ def wire(app) -> None:
     @bot.on_message(filters.command("rmsudo") & filters.private)
     async def _rm(_, m):
         if not app.sudo.is_owner(m.from_user.id):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return
@@ -38,7 +39,7 @@ def wire(app) -> None:
     async def _ls(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         rows = await app.sudo.all()
         body = "\ud83d\udc65 \u1d1c\u1d05\u1d0f\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
         body += "\n".join("  \u2022 " + str(r["tg_id"]) for r in rows)

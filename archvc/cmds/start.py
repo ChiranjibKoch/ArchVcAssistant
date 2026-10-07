@@ -1,6 +1,7 @@
 from pyrogram import filters
 
 from archvc import kbd
+from archvc.gate import deny_msg
 
 WELCOME_VIDEO = "https://telegra.ph/file/36221d40afde82941ffff.mp4"
 
@@ -25,7 +26,7 @@ def wire(app) -> None:
     async def _start(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         s = await app.fleet.stats()
         text = CAPTION.format(
             accounts=app.herd.size,
@@ -43,7 +44,7 @@ def wire(app) -> None:
     async def _menu(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         s = await app.fleet.stats()
         text = CAPTION.format(
             accounts=app.herd.size,

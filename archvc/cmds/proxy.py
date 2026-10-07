@@ -1,3 +1,4 @@
+from archvc.gate import deny_cb, deny_msg
 from pyrogram import filters
 
 from archvc import kbd
@@ -10,7 +11,7 @@ def wire(app) -> None:
     async def _px(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         s = await app.fleet.stats()
         body = (
             f"◈ ᴘʀᴏxʏ ꜰʟᴇᴇᴛ\n━━━━━━━━━━━━━━━━━━━━\n\n"

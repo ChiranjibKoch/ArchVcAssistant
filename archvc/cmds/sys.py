@@ -1,3 +1,4 @@
+from archvc.gate import deny_cb, deny_msg
 from pyrogram import filters
 
 
@@ -8,7 +9,7 @@ def wire(app) -> None:
     async def _st(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         live = await app.fleet.alive()
         total = await app.db.proxies.count_documents({})
         text = "\u2726 \u0455\u028f\u0455\u1d1b\u1d07\u1d0d\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
@@ -22,7 +23,7 @@ def wire(app) -> None:
     async def _px(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         live = await app.fleet.alive()
         total = await app.db.proxies.count_documents({})
         await m.reply("\ud83c\udf10 \u1d18\u0280\u1d0f\u0445\u026a\u1d07\u0455\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n  alive: " + str(live) + "\n  total: " + str(total))

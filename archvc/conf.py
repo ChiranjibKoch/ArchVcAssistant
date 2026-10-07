@@ -24,12 +24,16 @@ def _validate_session_key(k: str) -> str:
     return k
 
 
+def _parse_owners(raw: str) -> tuple:
+    return tuple(int(x.strip()) for x in raw.split(",") if x.strip())
+
+
 @dataclass(frozen=True)
 class Conf:
     api_id: int
     api_hash: str
     bot_token: str
-    owner: int
+    owner: tuple
     log_group: int
     mongo_uri: str
     mongo_db: str
@@ -44,7 +48,7 @@ def load() -> Conf:
         api_id=int(e["API_ID"]),
         api_hash=e["API_HASH"],
         bot_token=e["BOT_TOKEN"],
-        owner=int(e["OWNER_ID"]),
+        owner=_parse_owners(e["OWNER_ID"]),
         log_group=int(e["LOG_GROUP_ID"]),
         mongo_uri=e.get("MONGO_URI", "mongodb://localhost:27017"),
         mongo_db=e.get("MONGO_DB", "archvc"),

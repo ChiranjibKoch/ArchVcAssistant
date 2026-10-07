@@ -1,6 +1,7 @@
 from pyrogram import filters
 
 from archvc.intx import vcreact
+from archvc.gate import deny_cb, deny_msg
 
 
 def wire(app) -> None:
@@ -10,7 +11,7 @@ def wire(app) -> None:
     async def _j(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply("Usage: /joinvc <chat>")
@@ -36,7 +37,7 @@ def wire(app) -> None:
     async def _l(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply("Usage: /leavevc <chat>")
@@ -49,7 +50,7 @@ def wire(app) -> None:
     async def _vr(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 3:
             return await m.reply("Usage: /vcreact <chat> <emoji>")
@@ -68,7 +69,7 @@ def wire(app) -> None:
     async def _p(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split(maxsplit=2)
         if len(parts) < 3:
             return await m.reply("Usage: /play <chat> <source>")
@@ -86,7 +87,7 @@ def wire(app) -> None:
     async def _pa(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply("Usage: /pause <chat>")
@@ -97,7 +98,7 @@ def wire(app) -> None:
     async def _mu(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return
@@ -108,7 +109,7 @@ def wire(app) -> None:
     async def _um(_, m):
         uid = m.from_user.id
         if not (app.sudo.is_owner(uid) or app.sudo.has(uid)):
-            return
+            return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 2:
             return

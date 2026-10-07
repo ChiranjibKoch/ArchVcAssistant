@@ -2,23 +2,25 @@ from datetime import datetime, timezone
 
 
 class Roster:
-    def __init__(self, db, owner: int) -> None:
+    def __init__(self, db, owner) -> None:
         self.db = db
-        self.owner = owner
+        if isinstance(owner, (list, tuple, set)):
+            self.owners = set(int(x) for x in owner)
+        else:
+            self.owners = {int(owner)}
         self.ids: set[int] = set()
 
     async def seed(self) -> None:
-        await self.db.sudoers.update_one(
-            {"tg_id": self.owner},
-            {
-                "$set": {"tg_id": self.owner},
-                "$setOnInsert": {
-                    "by": "boot",
-                    "at": datetime.now(timezone.utc),
+        now = datetime.now(timezone.utc)
+        for oid in self.owners:
+            await self.db.sudoers.update_one(
+                {"tg_id": oid},
+                {
+                    "$set": {"tg_id": oid},
+                    "$setOnInsert": {"by": "boot", "at": now},
                 },
-            },
-            upsert=True,
-        )
+                upsert=True,
+            )
         await self.reload()
 
     async def reload(self) -> None:
@@ -40,11 +42,11 @@ class Roster:
         await self.db.sudoers.delete_one({"tg_id": tg_id})
         self.ids.discard(tg_id)
 
-    async def all(self) -> list[dict]:
+    async def all(self) -> list:
         return await self.db.sudoers.find({}).to_list(None)
 
     def is_owner(self, uid: int) -> bool:
-        return uid == self.owner
+        return uid in self.owners
 
     def has(self, uid: int) -> bool:
         return uid in self.ids
