@@ -74,6 +74,21 @@ class Tenants:
             f"◈ ᴛᴇɴᴀɴᴛ ʀᴇᴊᴇᴄᴛᴇᴅ\n  id: {tg_id}\n  by: {by}"
         )
 
+    async def revoke(self, tg_id: int, by: int):
+        await self.db.tenants.update_one(
+            {"tg_id": tg_id},
+            {
+                "$set": {
+                    "status": "revoked",
+                    "rejected_at": datetime.now(timezone.utc),
+                    "rejected_by": by,
+                }
+            },
+        )
+        await self.log.event(
+            f"◈ ᴛᴇɴᴀɴᴛ ʀᴇᴠᴏᴋᴇᴅ\n  id: {tg_id}\n  by: {by}"
+        )
+
     async def pending(self) -> list:
         return await self.db.tenants.find({"status": "pending"}).to_list(None)
 
