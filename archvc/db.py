@@ -10,6 +10,9 @@ class DB:
         await self._c.admin.command("ping")
         d = self._db
         await d.sudoers.create_index("tg_id", unique=True)
+        await d.tenants.create_index("tg_id", unique=True)
+        await d.tenants.create_index("tenant", unique=True, sparse=True)
+        await d.tenants.create_index("status")
         await d.accounts.create_index("account_id", unique=True)
         await d.accounts.create_index("owner")
         await d.accounts.create_index("state")
@@ -35,7 +38,13 @@ class DB:
     def logins(self):   return self._db.logins
 
     @property
+    def tenants(self): return self._db.tenants
+
+    @property
     def settings(self): return self._db.settings
+
+    def database(self, name: str):
+        return self._c[name]
 
     def close(self) -> None:
         self._c.close()

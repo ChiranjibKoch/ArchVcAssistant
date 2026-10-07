@@ -1,6 +1,8 @@
 from archvc.cmds import (
     acc,
+    approve_cmd,
     autoview_cmd,
+    copydb_cmd,
     intx,
     proxy,
     rejoin,
@@ -25,3 +27,5 @@ def wire(app) -> None:
     vcreact_cmd.wire(app)
     rejoin.wire(app)
     autoview_cmd.wire(app)
+    approve_cmd.wire(app)
+    copydb_cmd.wire(app)

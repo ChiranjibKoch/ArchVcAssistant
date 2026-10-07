@@ -5,7 +5,7 @@ import sys
 
 import uvloop
 
-from archvc import conf, db, logs, nav, sudo
+from archvc import conf, db, logs, nav, sudo, tenants
 from archvc.acct import generate, herd, login
 from archvc.cmds import wire
 from archvc.prox import fleet
@@ -27,6 +27,7 @@ class Arch:
         self.calls = None
         self.nav = None
         self.autojoin = None
+        self.tenants = None
         self.autoview = None
         self.watchdog = None
 
@@ -45,6 +46,7 @@ class Arch:
 
         self.sudo = sudo.Roster(self.db, self.conf.owner)
         await self.sudo.seed()
+        self.tenants = tenants.Tenants(self.db, self.log)
 
         self.fleet = fleet.Fleet(self.db)
         await self.fleet.refresh()
