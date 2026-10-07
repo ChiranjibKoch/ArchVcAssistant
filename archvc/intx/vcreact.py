@@ -69,3 +69,13 @@ async def burst(accounts, chat, emoji, limit=None, cache=None):
         items = items[:limit]
     await asyncio.gather(*(one(aid, c) for aid, c in items))
     return {"ok": ok, "fail": fail}
+
+
+async def send_one(client, input_call, emoji):
+    await client.invoke(
+        SendGroupCallMessage(
+            call=input_call,
+            random_id=random.randint(-2**63, 2**63 - 1),
+            message=TextWithEntities(text=emoji, entities=[]),
+        )
+    )
