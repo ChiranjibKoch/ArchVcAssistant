@@ -15,6 +15,7 @@ from archvc.cmds import (
     sys,
     vc,
     vcreact_cmd,
+    watch_cmd,
     wipe_cmd,
 )
 

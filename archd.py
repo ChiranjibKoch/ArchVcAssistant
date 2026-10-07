@@ -9,7 +9,7 @@ from archvc import conf, db, logs, nav, sudo, tenants
 from archvc.acct import generate, herd, login
 from archvc.cmds import wire
 from archvc.prox import fleet
-from archvc.intx import autojoin, autoview
+from archvc.intx import autojoin, autoview, postwatch
 from archvc.vc import calls, watchdog
 
 
@@ -29,6 +29,7 @@ class Arch:
         self.autojoin = None
         self.tenants = None
         self.autoview = None
+        self.postwatch = None
         self.watchdog = None
 
     async def boot(self) -> None:
@@ -72,6 +73,8 @@ class Arch:
         self.autoview = autoview.AutoViewer(
             self.db, self.herd, self.log
         )
+        self.postwatch = postwatch.PostWatch(self.db, self.herd, self.log)
+        await self.postwatch.load()
         av_resumed = await self.autoview.resume_all()
         if av_resumed:
             await self.log.note(f"autoview resumed: {av_resumed}")
