@@ -47,38 +47,72 @@ class Herd:
         self.on_new = None
 
     async def graze(self) -> None:
-        async for row in self.db.accounts.find({"state": {"$ne": "off"}}):
+        rows = await self.db.accounts.find(
+            {"state": {"$ne": "off"}}
+        ).to_list(None)
+        print(f"[herd] graze: {len(rows)} candidate accounts", flush=True)
+
+        for i, row in enumerate(rows, 1):
+            aid = row.get("account_id", "?")
+            print(f"[herd] {i}/{len(rows)} mounting {aid}", flush=True)
             try:
                 await self._mount(row)
                 self.size += 1
+                print(f"[herd]   OK {aid}", flush=True)
             except Exception as e:
                 self.sick += 1
+                reason = f"{type(e).__name__}: {e}"
+                print(f"[herd]   FAIL {aid}: {reason}", flush=True)
                 await self.db.accounts.update_one(
-                    {"account_id": row["account_id"]},
-                    {"$set": {"state": "sick", "why": str(e)[:200]}},
+                    {"account_id": aid},
+                    {"$set": {"state": "sick", "why": reason[:200]}},
                 )
+        print(f"[herd] graze done: {self.size} up, {self.sick} sick", flush=True)
 
     async def _mount(self, row: dict) -> None:
-        sess = store.open_(row["session"])
+        aid = row["account_id"]
+        raw = row.get("session", "")
+        if not raw:
+            raise ValueError("session field empty")
+
+        try:
+            sess = store.open_(raw)
+        except Exception as e:
+            raise ValueError(f"store.open_ failed: {e}")
+
+        if not sess or len(sess) < 100:
+            raise ValueError(f"session too short: len={len(sess) if sess else 0}")
+
         proxy = _tg_proxy(row["proxy"]) if row.get("proxy") else None
-        dev = row.get("device") or _device_for(row["account_id"])
-        c = Client(
-            f"a-{row['account_id']}",
-            api_id=row.get("api_id") or self.conf.api_id,
-            api_hash=row.get("api_hash") or self.conf.api_hash,
-            session_string=sess,
-            proxy=proxy,
-            device_model=dev["device_model"],
-            system_version=dev["system_version"],
-            app_version=dev["app_version"],
-            in_memory=True,
-            no_updates=True,
-        )
-        await c.start()
-        self.live[row["account_id"]] = c
+        dev = row.get("device") or _device_for(aid)
+
+        api_id = row.get("api_id") or self.conf.api_id
+        api_hash = row.get("api_hash") or self.conf.api_hash
+
+        if not api_id or not api_hash:
+            raise ValueError("api_id/api_hash missing")
+
+        try:
+            c = Client(
+                f"a-{aid}",
+                api_id=api_id,
+                api_hash=api_hash,
+                session_string=sess,
+                proxy=proxy,
+                device_model=dev["device_model"],
+                system_version=dev["system_version"],
+                app_version=dev["app_version"],
+                in_memory=True,
+                no_updates=True,
+            )
+            await c.start()
+        except Exception as e:
+            raise ValueError(f"client.start failed: {type(e).__name__}: {e}")
+
+        self.live[aid] = c
         if self.on_new:
             try:
-                await self.on_new(row["account_id"], c)
+                await self.on_new(aid, c)
             except Exception:
                 pass
 
@@ -105,6 +139,7 @@ class Herd:
                         "owner": owner,
                         "phone": phone,
                         "state": "up",
+                        "why": None,
                         "api_id": api_id or existing.get("api_id"),
                         "api_hash": api_hash or existing.get("api_hash"),
                         "tg_name": tg_name or existing.get("tg_name"),
