@@ -14,11 +14,12 @@ from archvc.cmds import (
     sys,
     vc,
     vcreact_cmd,
+    wipe_cmd,
 )
 
 _MODULES = [
     start, sudo, acc, vc, intx, proxy, sys, router,
-    vcreact_cmd, rejoin, autoview_cmd, approve_cmd, copydb_cmd,
+    vcreact_cmd, rejoin, autoview_cmd, approve_cmd, copydb_cmd, wipe_cmd,
 ]
 
 
