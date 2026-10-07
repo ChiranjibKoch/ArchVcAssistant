@@ -20,6 +20,7 @@ def wire(app) -> None:
         if action == "yes":
             tenant = await app.tenants.approve(target, by=uid)
             if tenant:
+                await app.sudo.add(target, by=uid)
                 try:
                     await cb.edit_message_text(
                         cb.message.text + f"\n\n✅ ᴀᴘᴘʀᴏᴠᴇᴅ  ·  ᴛᴇɴᴀɴᴛ {tenant}"

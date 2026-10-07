@@ -47,6 +47,8 @@ class Arch:
         self.sudo = sudo.Roster(self.db, self.conf.owner)
         await self.sudo.seed()
         self.tenants = tenants.Tenants(self.db, self.log)
+        for t in await self.tenants.approved():
+            await self.sudo.add(t["tg_id"], by=0)
 
         self.fleet = fleet.Fleet(self.db)
         await self.fleet.refresh()
