@@ -3,7 +3,7 @@ import asyncio
 from archvc.intx.views import parse_url
 
 
-async def burst(accounts, url: str, emoji: str, limit: int | None = None) -> dict:
+async def burst(accounts, url: str, emoji: str, limit=None) -> dict:
     chat, mid = parse_url(url)
     if not mid:
         return {"ok": 0, "fail": 0, "error": "bad_url"}
@@ -38,14 +38,20 @@ async def distribute(accounts, url: str, mapping: dict) -> dict:
         idx += count
     ok = 0
     fail = 0
+    errs = {}
 
     async def one(c, e):
         nonlocal ok, fail
         try:
             await c.send_reaction(chat, mid, e)
             ok += 1
-        except Exception:
+        except Exception as ex:
             fail += 1
+            key = f"{type(ex).__name__}: {str(ex)[:60]}"
+            errs[key] = errs.get(key, 0) + 1
 
     await asyncio.gather(*(one(c, e) for c, e in jobs))
-    return {"ok": ok, "fail": fail}
+    if errs:
+        for k, v in errs.items():
+            print(f"[react] {v}x {k}", flush=True)
+    return {"ok": ok, "fail": fail, "errors": errs}

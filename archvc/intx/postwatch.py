@@ -6,7 +6,7 @@ from archvc.intx import react, views
 DEFAULT_REACT = 30
 DEFAULT_VIEWS = 100
 DEFAULT_DELAY = 5.0
-DEFAULT_EMOJIS = ["🔥", "❤️", "👍", "🎉", "💯", "⚡", "😍", "👏", "😂", "🤩"]
+DEFAULT_EMOJIS = ["👍", "❤️", "🔥", "🎉", "👏", "😁", "🥰", "🤔", "🙏"]
 
 
 class PostWatch:
