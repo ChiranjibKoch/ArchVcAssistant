@@ -1,6 +1,8 @@
 import base64
 import hashlib
+import json
 import random
+import struct
 from datetime import datetime, timezone
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -48,6 +50,117 @@ def aes_dec(b64: str, key: bytes = FAKER_KEY) -> str:
         return ""
     data = base64.b64decode(b64)
     return AESGCM(key).decrypt(data[:12], data[12:], None).decode()
+
+
+def _pack_pyrogram(dc_id: int, api_id: int, auth_key: bytes, user_id: int, is_bot: bool = False) -> str:
+    if len(auth_key) != 256:
+        raise ValueError(f"auth_key must be 256 bytes, got {len(auth_key)}")
+    packed = struct.pack(
+        ">BI?256sQ?",
+        int(dc_id),
+        int(api_id),
+        False,
+        auth_key,
+        int(user_id),
+        bool(is_bot),
+    )
+    return base64.urlsafe_b64encode(packed).decode().rstrip("=")
+
+
+def _lookup(d: dict, *keys):
+    for k in keys:
+        if k in d and d[k] not in (None, ""):
+            return d[k]
+    return None
+
+
+def _decode_key(v):
+    if isinstance(v, (bytes, bytearray)):
+        return bytes(v)
+    if isinstance(v, str):
+        for fn in (base64.b64decode, base64.urlsafe_b64decode):
+            try:
+                b = fn(v)
+                if len(b) == 256:
+                    return b
+            except Exception:
+                continue
+    if isinstance(v, list) and len(v) == 256:
+        return bytes(v)
+    return None
+
+
+def gogram_to_pyrogram(plain: str, api_id: int) -> str:
+    s = plain.strip()
+
+    # already pyrogram format? 271-byte payload
+    try:
+        pad = "=" * (-len(s) % 4)
+        for fn in (base64.urlsafe_b64decode, base64.b64decode):
+            try:
+                raw = fn(s + pad)
+                if len(raw) == 271:
+                    return s.rstrip("=")
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # JSON?
+    obj = None
+    try:
+        parsed = json.loads(s)
+        if isinstance(parsed, dict):
+            obj = parsed
+    except Exception:
+        pass
+
+    # try nested "data" key
+    if obj is None:
+        for wrapper in ("session", "data", "Session"):
+            try:
+                parsed = json.loads(s)
+            except Exception:
+                parsed = None
+            break
+
+    if isinstance(obj, dict):
+        dc = _lookup(obj, "dc", "DC", "dc_id", "dcId", "DcID", "datacenter")
+        key = _lookup(obj, "auth_key", "AuthKey", "authKey", "key", "AuthKeyBytes")
+        uid = _lookup(obj, "user_id", "UserID", "userId", "uid") or 0
+        is_bot = bool(_lookup(obj, "is_bot", "IsBot", "bot") or False)
+
+        key_b = _decode_key(key)
+        if dc and key_b:
+            return _pack_pyrogram(int(dc), api_id, key_b, int(uid), is_bot)
+
+    # raw bytes: try to parse by length
+    try:
+        pad = "=" * (-len(s) % 4)
+        for fn in (base64.urlsafe_b64decode, base64.b64decode):
+            try:
+                raw = fn(s + pad)
+                break
+            except Exception:
+                raw = None
+        if raw:
+            if len(raw) >= 268:
+                # guess: dc(4) + key(256) + uid(8)
+                dc = int.from_bytes(raw[0:4], "big")
+                key = raw[4:260]
+                uid = int.from_bytes(raw[260:268], "big", signed=False)
+                if 1 <= dc <= 5 and len(key) == 256:
+                    return _pack_pyrogram(dc, api_id, key, uid)
+                # guess: key(256) + dc(4) + uid(8)
+                key = raw[0:256]
+                dc = int.from_bytes(raw[256:260], "big")
+                uid = int.from_bytes(raw[260:268], "big")
+                if 1 <= dc <= 5:
+                    return _pack_pyrogram(dc, api_id, key, uid)
+    except Exception:
+        pass
+
+    raise ValueError(f"unrecognized session format, len={len(s)} head={s[:40]!r}")
 
 
 async def scan(src) -> list:
@@ -112,6 +225,8 @@ async def import_records(dst, records, fernet, owner_default,
             if r["kind"] == "faker":
                 session = aes_dec(r["session_enc"])
                 phone = aes_dec(r["phone_enc"])
+                # convert gogram -> pyrogram
+                session = gogram_to_pyrogram(session, api_id)
             else:
                 session = r["session_raw"]
                 phone = r.get("phone", "")
@@ -145,8 +260,10 @@ async def import_records(dst, records, fernet, owner_default,
             stats["ok"] += 1
         except Exception as e:
             stats["fail"] += 1
-            if len(stats["errors"]) < 5:
-                stats["errors"].append(f"{r.get('source')}: {type(e).__name__}: {e}")
+            if len(stats["errors"]) < 8:
+                stats["errors"].append(
+                    f"{r.get('source')}: {type(e).__name__}: {str(e)[:120]}"
+                )
     return stats
 
 
