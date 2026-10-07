@@ -29,6 +29,7 @@ def root(is_owner):
         [succ("🎙 ᴊᴏɪɴ ᴠᴄ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ ᴠᴄ", "nav:vc:leave")],
         [prim("🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views")],
         [succ("⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ", "nav:autoreact"), prim("👁 ᴀᴜᴛᴏᴊᴏɪɴ", "nav:autojoin")],
+        [prim("📈 ᴀᴜᴛᴏᴠɪᴇᴡ", "nav:autoview"), prim("✅ ᴀʟʟᴏᴡ", "nav:allow")],
         [succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘʀᴏxʏ", "nav:px")],
         [prim("📜 ʟᴏɢꜱ", "nav:sys:logs"), prim("⚙ ꜱʏꜱᴛᴇᴍ", "nav:sys")],
     ]
@@ -50,6 +51,14 @@ def autoreact():
         [prim("⚡ ꜱᴛᴀᴛᴜꜱ", "ar:status")],
         [succ("➕ ᴇɴᴀʙʟᴇ", "ar:add"), dang("🚫 ᴏꜰꜰ ᴀʟʟ", "ar:offall")],
         [succ("✅ ᴀʟʟᴏᴡ ᴄʜᴀᴛ", "ar:allow"), prim("📋 ᴀʟʟᴏᴡᴇᴅ", "ar:list")],
+        [prim("◀ ʙᴀᴄᴋ", "nav:root")],
+    ])
+
+
+def autoview():
+    return InlineKeyboardMarkup([
+        [prim("📈 ꜱᴛᴀᴛᴜꜱ", "av:status")],
+        [succ("➕ ᴀᴅᴅ ᴛᴀʀɢᴇᴛ", "av:add"), dang("🚫 ᴏꜰꜰ ᴀʟʟ", "av:offall")],
         [prim("◀ ʙᴀᴄᴋ", "nav:root")],
     ])
 

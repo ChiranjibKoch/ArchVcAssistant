@@ -1,5 +1,6 @@
 from archvc.cmds import (
     acc,
+    autoview_cmd,
     intx,
     proxy,
     rejoin,
@@ -23,3 +24,4 @@ def wire(app) -> None:
     router.wire(app)
     vcreact_cmd.wire(app)
     rejoin.wire(app)
+    autoview_cmd.wire(app)

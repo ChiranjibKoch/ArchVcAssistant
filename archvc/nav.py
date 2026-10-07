@@ -342,6 +342,31 @@ def mount(app) -> None:
                 body = "\n".join(lines)
             await _edit(cb, body, kbd.back("autoreact"))
 
+        elif data == "nav:autoview":
+            nav.state.pop(uid, None)
+            await _edit(cb, await _av_text(app), kbd.autoview())
+
+        elif data == "av:status":
+            await _edit(cb, await _av_text(app), kbd.autoview())
+
+        elif data == "av:add":
+            nav.set(uid, "av:add")
+            await _edit(
+                cb,
+                "📈 ᴀᴅᴅ ᴛᴀʀɢᴇᴛ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴘᴏꜱᴛ ᴜʀʟ:",
+                kbd.back("autoview"),
+            )
+
+        elif data == "av:offall":
+            n = await app.autoview.stop_all()
+            await _edit(
+                cb,
+                "📈 ᴏꜰꜰ ᴀʟʟ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"  ꜱᴛᴏᴘᴘᴇᴅ {n}",
+                kbd.back("autoview"),
+            )
+
 
 async def _safe_answer(cb) -> None:
     try:

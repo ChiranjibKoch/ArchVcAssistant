@@ -9,7 +9,7 @@ from archvc import conf, db, logs, nav, sudo
 from archvc.acct import generate, herd, login
 from archvc.cmds import wire
 from archvc.prox import fleet
-from archvc.intx import autojoin
+from archvc.intx import autojoin, autoview
 from archvc.vc import calls, watchdog
 
 
@@ -27,6 +27,7 @@ class Arch:
         self.calls = None
         self.nav = None
         self.autojoin = None
+        self.autoview = None
         self.watchdog = None
 
     async def boot(self) -> None:
@@ -64,6 +65,12 @@ class Arch:
             self.db, self.herd, self.calls, self.log
         )
         self.watchdog = watchdog.Watchdog(self.calls, self.log)
+        self.autoview = autoview.AutoViewer(
+            self.db, self.herd, self.log
+        )
+        av_resumed = await self.autoview.resume_all()
+        if av_resumed:
+            await self.log.note(f"autoview resumed: {av_resumed}")
         resumed = await self.autojoin.resume_all()
         if resumed:
             await self.log.note(f"autoreact resumed: {resumed}")
@@ -79,6 +86,8 @@ class Arch:
     async def drain(self) -> None:
         if self.watchdog:
             await self.watchdog.stop()
+        if self.autoview:
+            await self.autoview.stop_all()
         if self.autojoin:
             await self.autojoin.stop_all()
         if self.calls:

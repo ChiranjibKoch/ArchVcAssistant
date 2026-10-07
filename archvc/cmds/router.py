@@ -55,6 +55,13 @@ def wire(app) -> None:
             added = await app.autojoin.allow(chat)
             await m.reply(f"✅ allowed: {chat}" if added else f"already allowed: {chat}")
 
+        elif state == "av:add":
+            res = await app.autoview.start(text, 120, 50)
+            if res == "started":
+                await m.reply(f"📈 ᴀᴜᴛᴏᴠɪᴇᴡ ᴏɴ\n  url: {text}\n  interval: 120s")
+            else:
+                await m.reply(res)
+
         elif state == "vc:join":
             chat = _chat(text)
             await m.reply("Joining...")
