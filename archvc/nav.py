@@ -401,3 +401,37 @@ async def _sys_text(app) -> str:
         px_total=s["total"],
         sessions=app.calls.count() if app.calls else 0,
     )
+
+
+async def _aj_text(app) -> str:
+    s = app.watchdog.status()
+    if not s:
+        return "👁 ᴀᴜᴛᴏᴊᴏɪɴ\n━━━━━━━━━━━━━━━━━━━━\n\n  ɴᴏ ᴄʜᴀᴛꜱ ᴡᴀᴛᴄʜᴇᴅ"
+    lines = ["👁 ᴀᴜᴛᴏᴊᴏɪɴ", "━━━━━━━━━━━━━━━━━━━━"]
+    for chat, st in s.items():
+        lines.append(f"  {chat}: {st['in']}/{st['should']}")
+    return "\n".join(lines)
+
+
+async def _ar_text(app) -> str:
+    st = app.autojoin.status()
+    allowed = await app.autojoin.allowed()
+    lines = ["⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ", "━━━━━━━━━━━━━━━━━━━━"]
+    lines.append(f"  ʀᴜɴɴɪɴɢ:  {len(st)}")
+    for chat, cfg in st.items():
+        lines.append(f"    {chat}  {cfg['interval']}s")
+    lines.append("")
+    lines.append(f"  ᴀʟʟᴏᴡᴇᴅ:  {len(allowed)}")
+    return "\n".join(lines)
+
+
+async def _av_text(app) -> str:
+    st = app.autoview.status()
+    if not st:
+        return "📈 ᴀᴜᴛᴏᴠɪᴇᴡ\n━━━━━━━━━━━━━━━━━━━━\n\n  ɴᴏ ᴛᴀʀɢᴇᴛꜱ"
+    lines = ["📈 ᴀᴜᴛᴏᴠɪᴇᴡ", "━━━━━━━━━━━━━━━━━━━━"]
+    for url, cfg in st.items():
+        short = url if len(url) < 40 else url[:37] + "..."
+        lines.append(f"  {short}")
+        lines.append(f"    {cfg['interval']}s · {cfg['count']}/cycle")
+    return "\n".join(lines)
