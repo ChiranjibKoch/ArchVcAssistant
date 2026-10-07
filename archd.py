@@ -9,6 +9,7 @@ from archvc import conf, db, logs, nav, sudo
 from archvc.acct import generate, herd, login
 from archvc.cmds import wire
 from archvc.prox import fleet
+from archvc.intx import autojoin
 from archvc.vc import calls
 
 
@@ -25,6 +26,7 @@ class Arch:
         self.generate = None
         self.calls = None
         self.nav = None
+        self.autojoin = None
 
     async def boot(self) -> None:
         self.conf = conf.load()
@@ -57,6 +59,12 @@ class Arch:
         self.calls = calls.Calls(self.herd, self.conf.vc_workers)
         await self.calls.spawn()
         self.herd.on_new = self.calls.spawn_one
+        self.autojoin = autojoin.AutoReactor(
+            self.db, self.herd, self.calls, self.log
+        )
+        resumed = await self.autojoin.resume_all()
+        if resumed:
+            await self.log.note(f"autoreact resumed: {resumed}")
 
         wire(self)
         nav.mount(self)
@@ -67,6 +75,8 @@ class Arch:
         await idle()
 
     async def drain(self) -> None:
+        if self.autojoin:
+            await self.autojoin.stop_all()
         if self.calls:
             await self.calls.kill()
         if self.fleet:
