@@ -10,7 +10,7 @@ from archvc.acct import generate, herd, login
 from archvc.cmds import wire
 from archvc.prox import fleet
 from archvc.intx import autojoin
-from archvc.vc import calls
+from archvc.vc import calls, watchdog
 
 
 class Arch:
@@ -27,6 +27,7 @@ class Arch:
         self.calls = None
         self.nav = None
         self.autojoin = None
+        self.watchdog = None
 
     async def boot(self) -> None:
         self.conf = conf.load()
@@ -62,6 +63,7 @@ class Arch:
         self.autojoin = autojoin.AutoReactor(
             self.db, self.herd, self.calls, self.log
         )
+        self.watchdog = watchdog.Watchdog(self.calls, self.log)
         resumed = await self.autojoin.resume_all()
         if resumed:
             await self.log.note(f"autoreact resumed: {resumed}")
@@ -75,6 +77,8 @@ class Arch:
         await idle()
 
     async def drain(self) -> None:
+        if self.watchdog:
+            await self.watchdog.stop()
         if self.autojoin:
             await self.autojoin.stop_all()
         if self.calls:
