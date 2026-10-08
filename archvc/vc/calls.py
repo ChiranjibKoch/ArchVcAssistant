@@ -59,7 +59,7 @@ class Calls:
             raise KeyError(f"no live call for {aid}")
         client = self.clients.get(aid)
         await _ensure_member(client, chat)
-        await c.play(chat)
+        await _do_join(c, chat)
         if mute:
             try:
                 await c.mute(chat)
@@ -127,10 +127,49 @@ async def _ensure_member(client, chat) -> None:
         pass
 
 
+def _is_already_joined(exc: Exception) -> bool:
+    s = str(exc).lower()
+    name = type(exc).__name__.lower()
+    return (
+        "already" in s
+        or "groupcallalreadyjoined" in name
+        or "alreadyjoined" in name
+        or "already in" in s
+    )
+
+
+def _is_no_call(exc: Exception) -> bool:
+    s = str(exc).lower()
+    name = type(exc).__name__.lower()
+    return (
+        "noactivegroupcall" in name
+        or "no active" in s
+        or "no group call" in s
+        or "groupcall_forbidden" in name
+    )
+
+
+async def _do_join(call, chat) -> None:
+    try:
+        await call.play(chat)
+    except Exception as e:
+        if _is_already_joined(e):
+            return
+        raise
+
+
 def _join(call, client, chat, mute):
     async def _f():
         await _ensure_member(client, chat)
-        await call.play(chat)
+        try:
+            await _do_join(call, chat)
+        except Exception as e:
+            if _is_already_joined(e):
+                pass
+            elif _is_no_call(e):
+                raise ValueError("no active VC")
+            else:
+                raise
         if mute:
             try:
                 await call.mute(chat)
@@ -141,7 +180,12 @@ def _join(call, client, chat, mute):
 
 def _leave(call, chat):
     async def _f():
-        await call.leave_call(chat)
+        try:
+            await call.leave_call(chat)
+        except Exception as e:
+            if _is_already_joined(e) or "not in" in str(e).lower():
+                return
+            raise
     return _f
 
 
