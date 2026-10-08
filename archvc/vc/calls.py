@@ -78,7 +78,8 @@ class Calls:
                 s = self.joined.get(aid)
                 if s:
                     s.discard(chat)
-        self.input_calls.clear()
+        for k in [k for k in self.input_calls if isinstance(k, tuple) and k[0] == chat]:
+            self.input_calls.pop(k, None)
         return res
 
     async def mute(self, chat) -> dict:

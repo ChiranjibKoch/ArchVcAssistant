@@ -208,13 +208,13 @@ class AutoReactor:
                 fail += 1
                 return
             try:
-                input_call = self.calls.input_calls.get(aid)
+                input_call = self.calls.input_calls.get((chat, aid))
                 if input_call is None:
                     input_call = await vcreact.resolve_input_call(client, chat)
                     if input_call is None:
                         fail += 1
                         return
-                    self.calls.input_calls[aid] = input_call
+                    self.calls.input_calls[(chat, aid)] = input_call
                 await vcreact.send_one(client, input_call, emoji)
                 ok += 1
                 self._last_used[f"{chat}:{aid}"] = time.monotonic()
@@ -223,7 +223,7 @@ class AutoReactor:
                 msg = f"{type(e).__name__}: {str(e)[:120]}"
                 print(f"[autoreact] {aid}: {msg}", flush=True)
                 if "GROUPCALL" in str(e) or "CALL" in str(e):
-                    self.calls.input_calls.pop(aid, None)
+                    self.calls.input_calls.pop((chat, aid), None)
 
         items = list(per.items())
         for i, (aid, emoji) in enumerate(items):

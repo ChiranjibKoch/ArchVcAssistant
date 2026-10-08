@@ -45,11 +45,11 @@ async def burst(accounts, chat, emoji, limit=None, cache=None):
         try:
             call = None
             if cache is not None:
-                call = cache.get(aid)
+                call = cache.get((chat, aid))
             if call is None:
                 call = await resolve_input_call(c, chat)
                 if cache is not None and call is not None:
-                    cache[aid] = call
+                    cache[(chat, aid)] = call
             if call is None:
                 fail += 1
                 return
