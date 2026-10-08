@@ -16,8 +16,8 @@ class Roster:
             await self.db.sudoers.update_one(
                 {"tg_id": oid},
                 {
-                    "$set": {"tg_id": oid},
-                    "$setOnInsert": {"by": "boot", "at": now},
+                    "$set": {"tg_id": oid, "role": "owner"},
+                    "$setOnInsert": {"by": 0, "at": now},
                 },
                 upsert=True,
             )
@@ -25,28 +25,48 @@ class Roster:
 
     async def reload(self) -> None:
         rows = await self.db.sudoers.find({}, {"tg_id": 1}).to_list(None)
-        self.ids = {r["tg_id"] for r in rows}
+        self.ids = {int(r["tg_id"]) for r in rows}
 
-    async def add(self, tg_id: int, by: int) -> None:
+    async def add(self, tg_id: int, by: int = 0) -> bool:
+        tg_id = int(tg_id)
+        if tg_id in self.owners:
+            return False
         await self.db.sudoers.update_one(
             {"tg_id": tg_id},
             {
-                "$set": {"by": by},
+                "$set": {"tg_id": tg_id, "role": "sudo", "by": int(by)},
                 "$setOnInsert": {"at": datetime.now(timezone.utc)},
             },
             upsert=True,
         )
         self.ids.add(tg_id)
+        return True
 
-    async def drop(self, tg_id: int) -> None:
-        await self.db.sudoers.delete_one({"tg_id": tg_id})
+    async def drop(self, tg_id: int) -> bool:
+        tg_id = int(tg_id)
+        if tg_id in self.owners:
+            return False
+        r = await self.db.sudoers.delete_one(
+            {"tg_id": tg_id, "role": {"$ne": "owner"}}
+        )
         self.ids.discard(tg_id)
+        return r.deleted_count > 0
 
     async def all(self) -> list:
-        return await self.db.sudoers.find({}).to_list(None)
+        rows = await self.db.sudoers.find({}).to_list(None)
+        for r in rows:
+            if "tg_id" in r:
+                r["tg_id"] = int(r["tg_id"])
+        return rows
 
     def is_owner(self, uid: int) -> bool:
-        return uid in self.owners
+        try:
+            return int(uid) in self.owners
+        except (TypeError, ValueError):
+            return False
 
     def has(self, uid: int) -> bool:
-        return uid in self.ids
+        try:
+            return int(uid) in self.ids or int(uid) in self.owners
+        except (TypeError, ValueError):
+            return False

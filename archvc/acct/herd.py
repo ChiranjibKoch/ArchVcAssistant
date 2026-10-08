@@ -69,7 +69,7 @@ class Herd:
                 )
         print(f"[herd] graze done: {self.size} up, {self.sick} sick", flush=True)
 
-    async def _mount(self, row: dict) -> None:
+    async def _mount(self, row: dict, rotate: bool = False) -> None:
         aid = row["account_id"]
         raw = row.get("session", "")
         if not raw:
@@ -83,7 +83,16 @@ class Herd:
         if not sess or len(sess) < 100:
             raise ValueError(f"session too short: len={len(sess) if sess else 0}")
 
-        proxy = _tg_proxy(row["proxy"]) if row.get("proxy") else None
+        proxy_url = row.get("proxy")
+        if rotate or not proxy_url:
+            new_proxy = await self.fleet.lend(aid)
+            if new_proxy and new_proxy != proxy_url:
+                proxy_url = new_proxy
+                await self.db.accounts.update_one(
+                    {"account_id": aid}, {"$set": {"proxy": proxy_url}}
+                )
+
+        proxy = _tg_proxy(proxy_url) if proxy_url else None
         dev = row.get("device") or _device_for(aid)
 
         api_id = row.get("api_id") or self.conf.api_id
@@ -107,7 +116,13 @@ class Herd:
             )
             await c.start()
         except Exception as e:
-            raise ValueError(f"client.start failed: {type(e).__name__}: {e}")
+            msg = f"{type(e).__name__}: {str(e)[:120]}"
+            print(f"[herd] mount {aid} failed: {msg}", flush=True)
+            if _is_conn_error(e) and proxy_url:
+                await self.fleet.mark_dead(proxy_url)
+                if not rotate:
+                    return await self._mount(row, rotate=True)
+            raise ValueError(f"client.start failed: {msg}")
 
         self.live[aid] = c
         if self.on_new:
@@ -197,6 +212,17 @@ class Herd:
 
     def get(self, aid: str) -> Client | None:
         return self.live.get(aid)
+
+
+def _is_conn_error(exc: Exception) -> bool:
+    s = str(exc).lower()
+    name = type(exc).__name__.lower()
+    keywords = (
+        "connection", "timeout", "timed out", "network",
+        "unreachable", "proxy", "eof", "reset", "broken",
+        "socket", "not connected", "cannot connect",
+    )
+    return any(k in s for k in keywords) or any(k in name for k in keywords)
 
 
 def _tg_proxy(url: str) -> dict | None:

@@ -2,7 +2,7 @@ from pyrogram.errors import UserAlreadyParticipant
 from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream
 
-from archvc.vc import queue
+from archvc.vc import health, queue
 
 
 class Calls:
@@ -41,6 +41,9 @@ class Calls:
         self.clients.clear()
         self.input_calls.clear()
         self.joined.clear()
+
+    async def precheck(self, bot, chat) -> dict:
+        return await health.check(bot, chat)
 
     async def join(self, chat, mute: bool = True) -> dict:
         jobs = [
@@ -145,7 +148,6 @@ def _is_no_call(exc: Exception) -> bool:
         "noactivegroupcall" in name
         or "no active" in s
         or "no group call" in s
-        or "groupcall_forbidden" in name
     )
 
 

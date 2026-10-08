@@ -16,6 +16,16 @@ def wire(app) -> None:
         if len(parts) < 2:
             return await m.reply("Usage: /joinvc <chat>")
         chat = _chat(parts[1])
+
+        h = await app.calls.precheck(app.bot, chat)
+        if h.get("error"):
+            return await m.reply(
+                "⛔ ᴄᴀɴ'ᴛ ᴊᴏɪɴ\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"  chat: {chat}\n"
+                f"  ᴇʀʀᴏʀ: {h['error']}"
+            )
+
         await m.reply("Joining...")
         res = await app.calls.join(chat)
         ok = sum(1 for v in res.values() if v == "ok")

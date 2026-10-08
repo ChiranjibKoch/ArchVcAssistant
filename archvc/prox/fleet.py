@@ -99,6 +99,14 @@ class Fleet:
     async def alive(self) -> int:
         return (await self.stats())["up"]
 
+    async def mark_dead(self, url: str) -> None:
+        await self.db.proxies.update_one(
+            {"url": url},
+            {"$set": {"health": "dead",
+                      "checked": datetime.now(timezone.utc)}},
+        )
+        self._stats = None
+
     async def lend(self, holder: str) -> str | None:
         row = await self.db.proxies.find_one_and_update(
             {"health": "up", "lent": {"$ne": holder}},
