@@ -1,4 +1,5 @@
 from pyrogram import filters
+from pyrogram.enums import ParseMode
 
 from archvc.gate import deny_msg
 from archvc.intx import react, views
@@ -18,16 +19,18 @@ def wire(app) -> None:
         if len(parts) < 2:
             return await m.reply(
                 "Usage: /rx <post_url> [emoji]\n"
-                f"If emoji omitted — random per account from:\n"
-                f"{' '.join(SAFE_EMOJIS)}"
+                f"If emoji omitted - random per account from:\n"
+                f"{' '.join(SAFE_EMOJIS)}",
+                parse_mode=ParseMode.DISABLED,
             )
         url = parts[1]
         emoji = parts[2] if len(parts) > 2 else None
 
         if emoji and emoji not in SAFE_EMOJIS:
             return await m.reply(
-                f"❌ {emoji} not allowed for non-premium accounts\n"
-                f"Safe set: {' '.join(SAFE_EMOJIS)}"
+                f"{emoji} not allowed for non-premium accounts\n"
+                f"Safe set: {' '.join(SAFE_EMOJIS)}",
+                parse_mode=ParseMode.DISABLED,
             )
 
         await m.reply("Sending...")
@@ -42,7 +45,7 @@ def wire(app) -> None:
         errs = res.get("errors") or {}
         for k, v in list(errs.items())[:3]:
             body += f"\n  {v}x  {k[:120]}"
-        await m.reply(body)
+        await m.reply(body, parse_mode=ParseMode.DISABLED)
         await app.log.event(
             f"▣ ʀᴇᴀᴄᴛɪᴏɴꜱ ꜱᴇɴᴛ\n  post: {url}\n  emoji: {label}\n"
             f"  ok: {res['ok']} | fail: {res['fail']}\n  by: {uid}"
@@ -64,7 +67,8 @@ def wire(app) -> None:
         emoji = parts[3] if len(parts) > 3 else None
         if emoji and emoji not in SAFE_EMOJIS:
             return await m.reply(
-                f"❌ {emoji} not allowed\nSafe set: {' '.join(SAFE_EMOJIS)}"
+                f"{emoji} not allowed\nSafe set: {' '.join(SAFE_EMOJIS)}",
+                parse_mode=ParseMode.DISABLED,
             )
         await m.reply("Boosting...")
         res = await views.boost(app.herd, url, n, react=emoji)
@@ -72,7 +76,7 @@ def wire(app) -> None:
         errs = res.get("errors") or {}
         for k, v in list(errs.items())[:3]:
             body += f"\n  {v}x  {k[:120]}"
-        await m.reply(body)
+        await m.reply(body, parse_mode=ParseMode.DISABLED)
         await app.log.event(
             f"▣ ᴠɪᴇᴡꜱ ᴀᴅᴅᴇᴅ\n  post: {url}\n"
             f"  target: {n} | ok: {res['ok']}\n  by: {uid}"

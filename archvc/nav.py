@@ -399,6 +399,27 @@ def mount(app) -> None:
                 kbd.back("sd"),
             )
 
+        elif data == "nav:vcreact":
+            nav.state.pop(uid, None)
+            await _edit(
+                cb,
+                "🎙 ᴠᴄ ʀᴇᴀᴄᴛɪᴏɴ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴄʜᴀᴛ ɪᴅ\n\n"
+                "ᴀꜱꜱɪꜱᴛᴀɴᴛꜱ ᴡɪʟʟ ᴀᴜᴛᴏ-ᴊᴏɪɴ ɪꜰ ɴᴇᴇᴅᴇᴅ,\n"
+                "ᴛʜᴇɴ ꜱᴇɴᴅ ʀᴇᴀᴄᴛɪᴏɴꜱ 3-5ꜱ ᴀᴘᴀʀᴛ.",
+                kbd.back("root"),
+            )
+            nav.set(uid, "vcrt:chat")
+
+        elif data == "vcrt:start":
+            nav.set(uid, "vcrt:chat")
+            await _edit(
+                cb,
+                "🎙 ᴠᴄ ʀᴇᴀᴄᴛɪᴏɴ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴄʜᴀᴛ ɪᴅ:",
+                kbd.back("root"),
+            )
+
 
 async def _safe_answer(cb) -> None:
     try:

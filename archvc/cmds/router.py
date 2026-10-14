@@ -100,6 +100,10 @@ def wire(app) -> None:
             )
             await m.reply(f"✅ Removed sudo: {tg}")
 
+        elif state == "vcrt:chat":
+            from archvc.cmds.vcreact_cmd import _do
+            await _do(app, m, _chat(text))
+
         elif state == "vc:join":
             chat = _chat(text)
             await m.reply("Joining...")

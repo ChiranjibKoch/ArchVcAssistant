@@ -29,6 +29,7 @@ def root(is_owner):
         [succ("🎙 ᴊᴏɪɴ ᴠᴄ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ ᴠᴄ", "nav:vc:leave")],
         [prim("🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views")],
         [succ("⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ", "nav:autoreact"), prim("👁 ᴀᴜᴛᴏᴊᴏɪɴ", "nav:autojoin")],
+        [succ("🎙 ᴠᴄ ʀᴇᴀᴄᴛ", "nav:vcreact"), prim("📈 ᴀᴜᴛᴏᴠɪᴇᴡ", "nav:autoview")],
         [prim("📈 ᴀᴜᴛᴏᴠɪᴇᴡ", "nav:autoview"), prim("✅ ᴀʟʟᴏᴡ", "nav:allow")],
         [succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘʀᴏxʏ", "nav:px")],
         [prim("📜 ʟᴏɢꜱ", "nav:sys:logs"), prim("⚙ ꜱʏꜱᴛᴇᴍ", "nav:sys")],
@@ -59,6 +60,13 @@ def autoview():
     return InlineKeyboardMarkup([
         [prim("📈 ꜱᴛᴀᴛᴜꜱ", "av:status")],
         [succ("➕ ᴀᴅᴅ ᴛᴀʀɢᴇᴛ", "av:add"), dang("🚫 ᴏꜰꜰ ᴀʟʟ", "av:offall")],
+        [prim("◀ ʙᴀᴄᴋ", "nav:root")],
+    ])
+
+
+def vcreact():
+    return InlineKeyboardMarkup([
+        [succ("🎙 ᴠᴄ ʀᴇᴀᴄᴛɪᴏɴ", "vcrt:start")],
         [prim("◀ ʙᴀᴄᴋ", "nav:root")],
     ])
 
