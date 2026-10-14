@@ -214,3 +214,39 @@ async def _burst_ids(herd, url, emoji, ids):
         await asyncio.sleep(0.3)
     await asyncio.gather(*tasks, return_exceptions=True)
     return {"ok": ok, "fail": fail, "errors": errs}
+
+
+async def _distribute_ids(herd, url, mapping, ids):
+    chat, mid = parse_url(url)
+    if not mid:
+        return {"ok": 0, "fail": 0, "error": "bad_url"}
+    clients = [herd.live[a] for a in ids if a in herd.live]
+    jobs = []
+    idx = 0
+    for emoji, count in mapping.items():
+        for c in clients[idx: idx + count]:
+            jobs.append((c, emoji))
+        idx += count
+    ok = 0
+    fail = 0
+    errs = {}
+
+    async def one(c, e):
+        nonlocal ok, fail
+        try:
+            await c.send_reaction(chat, mid, e)
+            ok += 1
+        except Exception as ex:
+            if _is_already(ex):
+                ok += 1
+                return
+            fail += 1
+            k = f"{type(ex).__name__}: {str(ex)[:80]}"
+            errs[k] = errs.get(k, 0) + 1
+
+    tasks = []
+    for c, e in jobs:
+        tasks.append(asyncio.create_task(one(c, e)))
+        await asyncio.sleep(0.3)
+    await asyncio.gather(*tasks, return_exceptions=True)
+    return {"ok": ok, "fail": fail, "errors": errs}

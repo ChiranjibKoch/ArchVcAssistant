@@ -8,28 +8,57 @@ class Tenants:
         self.log = log
 
     async def get(self, tg_id: int):
-        return await self.db.tenants.find_one({"tg_id": tg_id})
+        return await self.db.tenants.find_one({"tg_id": int(tg_id)})
 
     async def request(self, tg_id: int, username, first_name):
+        tg_id = int(tg_id)
         existing = await self.get(tg_id)
-        if existing:
+
+        if existing and existing.get("status") == "approved":
             return existing
+
+        if existing and existing.get("status") == "pending":
+            return existing
+
+        now = datetime.now(timezone.utc)
+        if existing and existing.get("status") in ("rejected", "revoked"):
+            await self.db.tenants.update_one(
+                {"tg_id": tg_id},
+                {
+                    "$set": {
+                        "status": "pending",
+                        "requested_at": now,
+                        "username": username,
+                        "name": first_name,
+                        "approval_messages": {},
+                    },
+                    "$unset": {
+                        "rejected_at": "",
+                        "rejected_by": "",
+                        "revoked_at": "",
+                    },
+                },
+            )
+            return await self.get(tg_id)
+
         rec = {
             "tg_id": tg_id,
             "username": username,
             "name": first_name,
             "status": "pending",
-            "requested_at": datetime.now(timezone.utc),
+            "requested_at": now,
         }
         await self.db.tenants.insert_one(rec)
         return rec
 
     async def approve(self, tg_id: int, by: int):
+        tg_id = int(tg_id)
         t = await self.get(tg_id)
         if not t:
             return None
-        if t.get("status") == "approved":
-            return t.get("tenant")
+        if t.get("status") == "approved" and t.get("tenant"):
+            return t["tenant"]
+
         tenant_id = None
         for _ in range(8):
             cand = secrets.token_hex(4)
@@ -38,6 +67,7 @@ class Tenants:
                 break
         if not tenant_id:
             return None
+
         await self.db.tenants.update_one(
             {"tg_id": tg_id},
             {
@@ -45,7 +75,7 @@ class Tenants:
                     "tenant": tenant_id,
                     "status": "approved",
                     "approved_at": datetime.now(timezone.utc),
-                    "approved_by": by,
+                    "approved_by": int(by),
                 }
             },
         )
@@ -56,12 +86,12 @@ class Tenants:
 
     async def reject(self, tg_id: int, by: int):
         await self.db.tenants.update_one(
-            {"tg_id": tg_id},
+            {"tg_id": int(tg_id)},
             {
                 "$set": {
                     "status": "rejected",
                     "rejected_at": datetime.now(timezone.utc),
-                    "rejected_by": by,
+                    "rejected_by": int(by),
                 }
             },
         )
@@ -71,12 +101,12 @@ class Tenants:
 
     async def revoke(self, tg_id: int, by: int):
         await self.db.tenants.update_one(
-            {"tg_id": tg_id},
+            {"tg_id": int(tg_id)},
             {
                 "$set": {
                     "status": "revoked",
                     "rejected_at": datetime.now(timezone.utc),
-                    "rejected_by": by,
+                    "rejected_by": int(by),
                 }
             },
         )
@@ -86,17 +116,9 @@ class Tenants:
 
     async def attach_messages(self, tg_id: int, messages: dict) -> None:
         await self.db.tenants.update_one(
-            {"tg_id": tg_id},
+            {"tg_id": int(tg_id)},
             {"$set": {"approval_messages": messages}},
         )
-
-    async def dispose(self, tg_id: int, action: str, by: int) -> dict:
-        t = await self.get(tg_id)
-        if not t:
-            return {"messages": {}, "already": False}
-        if t.get("status") in ("approved", "rejected", "revoked"):
-            return {"messages": t.get("approval_messages", {}), "already": True}
-        return {"messages": t.get("approval_messages", {}), "already": False}
 
     async def pending(self) -> list:
         return await self.db.tenants.find({"status": "pending"}).to_list(None)
@@ -115,3 +137,8 @@ class Tenants:
         if not t:
             return "new"
         return t.get("status", "new")
+
+    async def pending_or_new(self) -> list:
+        return await self.db.tenants.find(
+            {"status": {"$in": ["pending", "rejected", "revoked"]}}
+        ).to_list(None)

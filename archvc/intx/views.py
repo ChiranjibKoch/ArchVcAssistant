@@ -110,3 +110,33 @@ def _scope_ids(app, scope):
         aid for aid, s in getattr(app.herd, "scope", {}).items()
         if s == scope
     ]
+
+
+async def _boost_ids(herd, url, count, ids):
+    chat, mid = parse_url(url)
+    if not mid:
+        return {"ok": 0, "fail": 0, "error": "bad_url"}
+    clients = [herd.live[a] for a in ids if a in herd.live][:count]
+    ok = 0
+    fail = 0
+    errs = {}
+
+    async def one(c):
+        nonlocal ok, fail
+        try:
+            peer = await c.resolve_peer(chat)
+            await c.invoke(GetMessagesViews(
+                peer=peer, id=[mid], increment=True,
+            ))
+            ok += 1
+        except Exception as ex:
+            fail += 1
+            k = f"{type(ex).__name__}: {str(ex)[:80]}"
+            errs[k] = errs.get(k, 0) + 1
+
+    tasks = []
+    for c in clients:
+        tasks.append(asyncio.create_task(one(c)))
+        await asyncio.sleep(0.4)
+    await asyncio.gather(*tasks, return_exceptions=True)
+    return {"ok": ok, "fail": fail, "errors": errs}

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from pyrogram import filters
 from pyrogram.enums import ButtonStyle
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -45,7 +47,21 @@ REJECTED = """◈ ᴀʀᴄʜ
 
   ⛔ ᴀᴄᴄᴇꜱꜱ ᴅᴇɴɪᴇᴅ
 
-  ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛ ᴡᴀꜱ ʀᴇᴊᴇᴄᴛᴇᴅ.
+  ʏᴏᴜʀ ʟᴀꜱᴛ ʀᴇǫᴜᴇꜱᴛ ᴡᴀꜱ ʀᴇᴊᴇᴄᴛᴇᴅ.
+
+  ꜱᴇɴᴅ /start ᴀɢᴀɪɴ ᴛᴏ ʀᴇQᴜᴇꜱᴛ.
+
+━━━━━━━━━━━━━━━━━━━━
+ʏᴏᴜʀ ɪᴅ: {uid}"""
+
+REVOKED = """◈ ᴀʀᴄʜ
+━━━━━━━━━━━━━━━━━━━━
+
+  🚫 ᴀᴄᴄᴇꜱꜱ ʀᴇᴠᴏᴋᴇᴅ
+
+  ʏᴏᴜʀ ᴀᴄᴄᴇꜱꜱ ᴡᴀꜱ ʀᴇᴍᴏᴠᴇᴅ.
+
+  ꜱᴇɴᴅ /start ᴀɢᴀɪɴ ᴛᴏ ʀᴇQᴜᴇꜱᴛ.
 
 ━━━━━━━━━━━━━━━━━━━━
 ʏᴏᴜʀ ɪᴅ: {uid}"""
@@ -77,22 +93,37 @@ async def _route(app, m) -> None:
     if app.sudo.is_owner(uid):
         return await _show_menu(app, m, uid, "ᴏᴡɴᴇʀ")
 
+    if app.sudo.has(uid):
+        return await _show_menu(app, m, uid, "ꜱᴜᴅᴏ")
+
     t = await app.tenants.get(uid)
     status = (t or {}).get("status", "new")
 
     if status == "approved":
-        return await _show_menu(app, m, uid, f"ᴛᴇɴᴀɴᴛ {(t or {}).get('tenant')}")
+        role = f"ᴛᴇɴᴀɴᴛ {(t or {}).get('tenant')}"
+        return await _show_menu(app, m, uid, role)
 
     if status == "pending":
         return await m.reply(PENDING.format(uid=uid))
 
     if status == "rejected":
-        return await m.reply(REJECTED.format(uid=uid))
+        await m.reply(REJECTED.format(uid=uid))
+        rec = await app.tenants.request(
+            uid, m.from_user.username, m.from_user.first_name or ""
+        )
+        await _notify_owners(app, rec, uid)
+        return
+
+    if status == "revoked":
+        await m.reply(REVOKED.format(uid=uid))
+        rec = await app.tenants.request(
+            uid, m.from_user.username, m.from_user.first_name or ""
+        )
+        await _notify_owners(app, rec, uid)
+        return
 
     rec = await app.tenants.request(
-        uid,
-        m.from_user.username,
-        m.from_user.first_name or "",
+        uid, m.from_user.username, m.from_user.first_name or ""
     )
     await m.reply(NEW_REQ.format(uid=uid))
     await _notify_owners(app, rec, uid)
@@ -121,7 +152,6 @@ async def _show_menu(app, m, uid, role: str) -> None:
 
 
 async def _notify_owners(app, rec, requester_id: int) -> None:
-    from datetime import datetime, timezone
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     uname = f"@{rec['username']}" if rec.get("username") else "—"
     text = OWNER_MSG.format(
@@ -150,6 +180,5 @@ async def _notify_owners(app, rec, requester_id: int) -> None:
             print(f"[approval] sent to owner {owner_id}", flush=True)
         except Exception as e:
             print(f"[approval] FAIL owner {owner_id}: {type(e).__name__}: {e}", flush=True)
-
     if sent:
         await app.tenants.attach_messages(requester_id, sent)
