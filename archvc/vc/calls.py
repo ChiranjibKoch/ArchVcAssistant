@@ -116,6 +116,51 @@ class Calls:
         jobs = [(aid, _resume(c, chat)) for aid, c in self.live.items()]
         return await self.q.fire(jobs)
 
+
+    async def join_scoped(self, chat, scope, mute: bool = True) -> dict:
+        from archvc.acct import scope as _sc
+        aids = set(_sc.ids_for_herd(self.herd, scope)) if hasattr(_sc, "ids_for_herd") else set()
+        if not aids:
+            return {}
+        jobs = [
+            (aid, _join(c, self.clients.get(aid), chat, mute))
+            for aid, c in self.live.items()
+            if aid in aids
+        ]
+        res = await self.q.fire(jobs)
+        for aid, status in res.items():
+            if status == "ok":
+                self.joined.setdefault(aid, set()).add(chat)
+        return res
+
+    async def leave_scoped(self, chat, scope) -> dict:
+        ids = self._ids_for_scope(scope)
+        jobs = [(aid, _leave(c, chat)) for aid, c in self.live.items() if aid in ids]
+        return await self.q.fire(jobs)
+
+    async def mute_scoped(self, chat, scope) -> dict:
+        ids = self._ids_for_scope(scope)
+        jobs = [(aid, _mute(c, chat)) for aid, c in self.live.items() if aid in ids]
+        return await self.q.fire(jobs)
+
+    async def unmute_scoped(self, chat, scope) -> dict:
+        ids = self._ids_for_scope(scope)
+        jobs = [(aid, _unmute(c, chat)) for aid, c in self.live.items() if aid in ids]
+        return await self.q.fire(jobs)
+
+    async def play_all_scoped(self, chat, src, scope) -> dict:
+        ids = self._ids_for_scope(scope)
+        jobs = [(aid, _audio(c, chat, src)) for aid, c in self.live.items() if aid in ids]
+        return await self.q.fire(jobs)
+
+    def _ids_for_scope(self, scope) -> set:
+        if not scope:
+            return set()
+        return {
+            aid for aid, s in getattr(self.herd, "scope", {}).items()
+            if s == scope and aid in self.live
+        }
+
     def count(self) -> int:
         return len(self.live)
 

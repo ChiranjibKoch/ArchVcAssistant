@@ -43,7 +43,7 @@ class Flow:
         if st and st.get("client"):
             asyncio.create_task(_quiet(st["client"]))
 
-    async def begin(self, uid: int, raw_phone: str) -> str:
+    async def begin(self, uid: int, raw_phone: str, scope: str = "owner") -> str:
         phone = _norm(raw_phone)
         if not _valid(phone):
             return "Invalid phone. Example: 919876543210 or +919876543210"
@@ -83,6 +83,7 @@ class Flow:
 
         self.pending[uid] = {
             "step": "otp",
+            "scope": scope,
             "phone": phone,
             "client": c,
             "hash": sent.phone_code_hash,
@@ -197,7 +198,7 @@ class Flow:
             f"  status: {tag}"
         )
 
-    async def import_(self, uid: int, session: str) -> str:
+    async def import_(self, uid: int, session: str, scope: str = "owner") -> str:
         c = Client(
             f"probe-{uid}",
             api_id=self.conf.api_id,

@@ -42,6 +42,7 @@ class Herd:
         self.conf = conf
         self.fleet = fleet
         self.live: dict[str, Client] = {}
+        self.scope: dict[str, str] = {}
         self.size = 0
         self.sick = 0
         self.on_new = None
@@ -50,19 +51,17 @@ class Herd:
         rows = await self.db.accounts.find(
             {"state": {"$ne": "off"}}
         ).to_list(None)
-        print(f"[herd] graze: {len(rows)} candidate accounts", flush=True)
+        print(f"[herd] graze: {len(rows)} candidates", flush=True)
 
         for i, row in enumerate(rows, 1):
             aid = row.get("account_id", "?")
-            print(f"[herd] {i}/{len(rows)} mounting {aid}", flush=True)
             try:
                 await self._mount(row)
                 self.size += 1
-                print(f"[herd]   OK {aid}", flush=True)
             except Exception as e:
                 self.sick += 1
                 reason = f"{type(e).__name__}: {e}"
-                print(f"[herd]   FAIL {aid}: {reason}", flush=True)
+                print(f"[herd]   FAIL {aid}: {reason[:120]}", flush=True)
                 await self.db.accounts.update_one(
                     {"account_id": aid},
                     {"$set": {"state": "sick", "why": reason[:200]}},
@@ -73,15 +72,13 @@ class Herd:
         aid = row["account_id"]
         raw = row.get("session", "")
         if not raw:
-            raise ValueError("session field empty")
-
+            raise ValueError("session empty")
         try:
             sess = store.open_(raw)
         except Exception as e:
-            raise ValueError(f"store.open_ failed: {e}")
-
+            raise ValueError(f"open failed: {e}")
         if not sess or len(sess) < 100:
-            raise ValueError(f"session too short: len={len(sess) if sess else 0}")
+            raise ValueError(f"session too short")
 
         proxy_url = row.get("proxy")
         if rotate or not proxy_url:
@@ -94,12 +91,8 @@ class Herd:
 
         proxy = _tg_proxy(proxy_url) if proxy_url else None
         dev = row.get("device") or _device_for(aid)
-
         api_id = row.get("api_id") or self.conf.api_id
         api_hash = row.get("api_hash") or self.conf.api_hash
-
-        if not api_id or not api_hash:
-            raise ValueError("api_id/api_hash missing")
 
         try:
             c = Client(
@@ -117,14 +110,13 @@ class Herd:
             await c.start()
         except Exception as e:
             msg = f"{type(e).__name__}: {str(e)[:120]}"
-            print(f"[herd] mount {aid} failed: {msg}", flush=True)
-            if _is_conn_error(e) and proxy_url:
+            if _is_conn_error(e) and proxy_url and not rotate:
                 await self.fleet.mark_dead(proxy_url)
-                if not rotate:
-                    return await self._mount(row, rotate=True)
-            raise ValueError(f"client.start failed: {msg}")
+                return await self._mount(row, rotate=True)
+            raise ValueError(f"start failed: {msg}")
 
         self.live[aid] = c
+        self.scope[aid] = row.get("scope", "owner")
         if self.on_new:
             try:
                 await self.on_new(aid, c)
@@ -141,6 +133,7 @@ class Herd:
         api_hash: str | None = None,
         tg_name: str | None = None,
         tg_id: int | None = None,
+        scope: str = "owner",
     ) -> tuple[str, bool]:
         aid = store.fingerprint(session)
         existing = await self.db.accounts.find_one({"account_id": aid})
@@ -155,6 +148,7 @@ class Herd:
                         "phone": phone,
                         "state": "up",
                         "why": None,
+                        "scope": scope,
                         "api_id": api_id or existing.get("api_id"),
                         "api_hash": api_hash or existing.get("api_hash"),
                         "tg_name": tg_name or existing.get("tg_name"),
@@ -167,6 +161,8 @@ class Herd:
                 row = await self.db.accounts.find_one({"account_id": aid})
                 await self._mount(row)
                 self.size += 1
+            else:
+                self.scope[aid] = scope
             return aid, False
 
         if proxy is None:
@@ -178,6 +174,7 @@ class Herd:
             "session": store.seal(session),
             "proxy": proxy,
             "state": "up",
+            "scope": scope,
             "api_id": api_id,
             "api_hash": api_hash,
             "tg_name": tg_name,
@@ -191,6 +188,7 @@ class Herd:
 
     async def cull(self, aid: str) -> None:
         c = self.live.pop(aid, None)
+        self.scope.pop(aid, None)
         if c:
             try:
                 await c.stop()
@@ -208,6 +206,7 @@ class Herd:
             except Exception:
                 pass
         self.live.clear()
+        self.scope.clear()
         self.size = 0
 
     def get(self, aid: str) -> Client | None:
@@ -216,13 +215,10 @@ class Herd:
 
 def _is_conn_error(exc: Exception) -> bool:
     s = str(exc).lower()
-    name = type(exc).__name__.lower()
-    keywords = (
-        "connection", "timeout", "timed out", "network",
-        "unreachable", "proxy", "eof", "reset", "broken",
-        "socket", "not connected", "cannot connect",
-    )
-    return any(k in s for k in keywords) or any(k in name for k in keywords)
+    n = type(exc).__name__.lower()
+    keys = ("connection", "timeout", "network", "unreachable",
+            "proxy", "eof", "reset", "socket", "cannot connect")
+    return any(k in s for k in keys) or any(k in n for k in keys)
 
 
 def _tg_proxy(url: str) -> dict | None:

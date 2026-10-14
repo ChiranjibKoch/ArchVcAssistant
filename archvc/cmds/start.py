@@ -1,6 +1,6 @@
+from pyrogram import filters
 from pyrogram.enums import ButtonStyle
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from pyrogram import filters
 
 from archvc import kbd
 
@@ -25,7 +25,7 @@ NEW_REQ = """◈ ᴀʀᴄʜ
   📥 ᴀᴄᴄᴇꜱꜱ ʀᴇǫᴜᴇꜱᴛ sᴇɴᴛ
 
   ᴛʜᴇ ᴏᴡɴᴇʀ ᴡɪʟʟ ʀᴇᴠɪᴇᴡ ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛ.
-  ʏᴏᴜ'ʟʟ ɢᴇᴛ ᴀ ᴍᴇssᴀɢᴇ ᴏɴᴄᴇ ᴀᴘᴘʀᴏᴠᴇᴅ.
+  ʏᴏᴜ'ʟʟ ɢᴇᴛ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴏɴᴄᴇ ᴀᴘᴘʀᴏᴠᴇᴅ.
 
 ━━━━━━━━━━━━━━━━━━━━
 ʏᴏᴜʀ ɪᴅ: {uid}"""
@@ -50,18 +50,6 @@ REJECTED = """◈ ᴀʀᴄʜ
 ━━━━━━━━━━━━━━━━━━━━
 ʏᴏᴜʀ ɪᴅ: {uid}"""
 
-APPROVED_INFO = """◈ ᴀʀᴄʜ
-━━━━━━━━━━━━━━━━━━━━
-
-  ✅ ᴀᴄᴄᴇꜱꜱ ɢʀᴀɴᴛᴇᴅ
-
-  ᴛᴇɴᴀɴᴛ: {tenant}
-  sᴛᴀᴛᴜs: ᴀᴄᴛɪᴠᴇ
-
-━━━━━━━━━━━━━━━━━━━━
-ᴀᴄᴄᴇꜱꜱ ᴛᴏ ꜰᴜʟʟ ꜰᴇᴀᴛᴜʀᴇs ɪs
-ᴘᴇɴᴅɪɴɢ — ᴄᴏɴᴛᴀᴄᴛ ᴏᴡɴᴇʀ.ᴀ"""
-
 OWNER_MSG = """📥 ᴀᴄᴄᴇꜱꜱ ʀᴇǫᴜᴇꜱᴛ
 ━━━━━━━━━━━━━━━━━━━━
 
@@ -76,31 +64,29 @@ def wire(app) -> None:
 
     @bot.on_message(filters.command("start") & filters.private)
     async def _start(_, m):
-        uid = m.from_user.id
-        if app.sudo.is_owner(uid) or app.sudo.has(uid):
-            return await _show_owner(app, m, uid)
-        await _route_tenant(app, m)
+        await _route(app, m)
 
     @bot.on_message(filters.command("menu") & filters.private)
     async def _menu(_, m):
-        uid = m.from_user.id
-        if app.sudo.is_owner(uid) or app.sudo.has(uid):
-            return await _show_owner(app, m, uid)
-        await _route_tenant(app, m)
+        await _route(app, m)
 
 
-async def _route_tenant(app, m) -> None:
+async def _route(app, m) -> None:
     uid = m.from_user.id
-    st = await app.tenants.status_of(uid)
 
-    if st == "approved":
-        tenant = await app.tenants.tenant_of(uid)
-        return await m.reply(APPROVED_INFO.format(tenant=tenant))
+    if app.sudo.is_owner(uid):
+        return await _show_menu(app, m, uid, "ᴏᴡɴᴇʀ")
 
-    if st == "pending":
+    t = await app.tenants.get(uid)
+    status = (t or {}).get("status", "new")
+
+    if status == "approved":
+        return await _show_menu(app, m, uid, f"ᴛᴇɴᴀɴᴛ {(t or {}).get('tenant')}")
+
+    if status == "pending":
         return await m.reply(PENDING.format(uid=uid))
 
-    if st == "rejected":
+    if status == "rejected":
         return await m.reply(REJECTED.format(uid=uid))
 
     rec = await app.tenants.request(
@@ -110,6 +96,28 @@ async def _route_tenant(app, m) -> None:
     )
     await m.reply(NEW_REQ.format(uid=uid))
     await _notify_owners(app, rec, uid)
+
+
+async def _show_menu(app, m, uid, role: str) -> None:
+    from archvc.acct import scope as sc
+    sp = await sc.resolve(app, uid)
+    live = sc.ids_for(app, sp) if sp else []
+    s = await app.fleet.stats()
+    text = CAPTION.format(
+        accounts=len(live),
+        proxies=s["up"],
+        sessions=len(live),
+        role=role,
+    )
+    is_owner = app.sudo.is_owner(uid)
+    try:
+        await m.reply_video(
+            video=WELCOME_VIDEO,
+            caption=text,
+            reply_markup=kbd.root(is_owner),
+        )
+    except Exception:
+        await m.reply(text, reply_markup=kbd.root(is_owner))
 
 
 async def _notify_owners(app, rec, requester_id: int) -> None:
@@ -134,34 +142,14 @@ async def _notify_owners(app, rec, requester_id: int) -> None:
             style=ButtonStyle.DANGER,
         ),
     ]])
-    messages = {}
+    sent = {}
     for owner_id in app.sudo.owners:
         try:
             msg = await app.bot.send_message(owner_id, text, reply_markup=kb)
-            messages[str(owner_id)] = msg.id
+            sent[str(owner_id)] = msg.id
             print(f"[approval] sent to owner {owner_id}", flush=True)
         except Exception as e:
             print(f"[approval] FAIL owner {owner_id}: {type(e).__name__}: {e}", flush=True)
-            try:
-                await app.log.event(
-                    f"⚠ ᴀᴘᴘʀᴏᴠᴀʟ ᴅᴍ ꜰᴀɪʟ\n  owner: {owner_id}\n  err: {type(e).__name__}"
-                )
-            except Exception:
-                pass
-    if messages:
-        await app.tenants.attach_messages(requester_id, messages)
 
-
-async def _show_owner(app, m, uid: int) -> None:
-    s = await app.fleet.stats()
-    text = CAPTION.format(
-        accounts=app.herd.size,
-        proxies=s["up"],
-        sessions=app.calls.count() if app.calls else 0,
-        role="ᴏᴡɴᴇʀ" if app.sudo.is_owner(uid) else "ꜱᴜᴅᴏ",
-    )
-    await m.reply_video(
-        video=WELCOME_VIDEO,
-        caption=text,
-        reply_markup=kbd.root(app.sudo.is_owner(uid)),
-    )
+    if sent:
+        await app.tenants.attach_messages(requester_id, sent)
