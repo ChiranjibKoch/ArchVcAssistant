@@ -6,7 +6,7 @@ import sys
 import uvloop
 
 from archvc import conf, db, logs, nav, sudo, tenants
-from archvc.acct import generate, herd, login
+from archvc.acct import generate, herd, login, online
 from archvc.cmds import wire
 from archvc.prox import fleet
 from archvc.intx import autojoin, autoview, postwatch
@@ -28,6 +28,7 @@ class Arch:
         self.nav = None
         self.autojoin = None
         self.tenants = None
+        self.online = None
         self.autoview = None
         self.postwatch = None
         self.watchdog = None
@@ -66,6 +67,8 @@ class Arch:
         self.calls = calls.Calls(self.herd, self.conf.vc_workers)
         await self.calls.spawn()
         self.herd.on_new = self.calls.spawn_one
+        self.online = online.OnlineKeeper(self.herd, self.log)
+        self.online.start()
         self.autojoin = autojoin.AutoReactor(
             self.db, self.herd, self.calls, self.log
         )
@@ -91,6 +94,8 @@ class Arch:
         await idle()
 
     async def drain(self) -> None:
+        if self.online:
+            await self.online.stop()
         if self.watchdog:
             await self.watchdog.stop()
         if self.autoview:
