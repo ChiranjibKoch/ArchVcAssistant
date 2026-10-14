@@ -89,6 +89,20 @@ class Tenants:
             f"◈ ᴛᴇɴᴀɴᴛ ʀᴇᴠᴏᴋᴇᴅ\n  id: {tg_id}\n  by: {by}"
         )
 
+    async def attach_messages(self, tg_id: int, messages: dict) -> None:
+        await self.db.tenants.update_one(
+            {"tg_id": tg_id},
+            {"$set": {"approval_messages": messages}},
+        )
+
+    async def dispose(self, tg_id: int, action: str, by: int) -> dict:
+        t = await self.get(tg_id)
+        if not t:
+            return {"messages": {}, "already": False}
+        if t.get("status") in ("approved", "rejected", "revoked"):
+            return {"messages": t.get("approval_messages", {}), "already": True}
+        return {"messages": t.get("approval_messages", {}), "already": False}
+
     async def pending(self) -> list:
         return await self.db.tenants.find({"status": "pending"}).to_list(None)
 

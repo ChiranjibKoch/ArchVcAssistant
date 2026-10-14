@@ -3,6 +3,14 @@ from pyrogram import filters
 from archvc.gate import deny_msg
 
 
+def _resolved_text(original: str, action: str, by: int) -> str:
+    if action == "yes":
+        tail = f"\n\n✅ ᴀᴘᴘʀᴏᴠᴇᴅ  ·  ʙʏ {by}"
+    else:
+        tail = f"\n\n❌ ʀᴇᴊᴇᴄᴛᴇᴅ  ·  ʙʏ {by}"
+    return (original or "") + tail
+
+
 def wire(app) -> None:
     bot = app.bot
 
@@ -15,45 +23,53 @@ def wire(app) -> None:
         parts = cb.data.split(":")
         action = parts[1]
         target = int(parts[2])
+
+        info = await app.tenants.dispose(target, action, by=uid)
+        if info.get("already"):
+            return await cb.answer("already resolved", show_alert=True)
+
         await cb.answer()
 
         if action == "yes":
             tenant = await app.tenants.approve(target, by=uid)
             if tenant:
                 await app.sudo.add(target, by=uid)
-                try:
-                    await cb.edit_message_text(
-                        cb.message.text + f"\n\n✅ ᴀᴘᴘʀᴏᴠᴇᴅ  ·  ᴛᴇɴᴀɴᴛ {tenant}"
-                    )
-                except Exception:
-                    pass
-                try:
-                    await app.bot.send_message(
-                        target,
-                        "✅ ᴀᴄᴄᴇꜱꜱ ᴀᴘᴘʀᴏᴠᴇᴅ\n"
-                        "━━━━━━━━━━━━━━━━━━━━\n"
-                        f"  ᴛᴇɴᴀɴᴛ: {tenant}\n\n"
-                        "ꜱᴇɴᴅ /start ᴀɢᴀɪɴ.",
-                    )
-                except Exception:
-                    pass
-            else:
-                await cb.answer("approval failed", show_alert=True)
-            return
-
-        if action == "no":
+            resolved = _resolved_text(cb.message.text, "yes", uid)
+        else:
             await app.tenants.reject(target, by=uid)
+            resolved = _resolved_text(cb.message.text, "no", uid)
+
+        for owner_id_str, msg_id in (info.get("messages") or {}).items():
             try:
-                await cb.edit_message_text(
-                    cb.message.text + "\n\n❌ ʀᴇᴊᴇᴄᴛᴇᴅ"
+                oid = int(owner_id_str)
+                if oid == uid and cb.message and cb.message.id == msg_id:
+                    await cb.edit_message_text(resolved)
+                else:
+                    await app.bot.edit_message_text(
+                        chat_id=oid,
+                        message_id=msg_id,
+                        text=resolved,
+                    )
+            except Exception as e:
+                print(f"[approval] edit fail owner={owner_id_str}: {e}", flush=True)
+
+        if action == "yes":
+            tenant = await app.tenants.tenant_of(target)
+            try:
+                await app.bot.send_message(
+                    target,
+                    "✅ ᴀᴄᴄᴇꜱꜱ ᴀᴘᴘʀᴏᴠᴇᴅ\n"
+                    "━━━━━━━━━━━━━━━━━━━━\n"
+                    f"  ᴛᴇɴᴀɴᴛ: {tenant}\n\n"
+                    "ꜱᴇɴᴅ /start ᴀɢᴀɪɴ.",
                 )
             except Exception:
                 pass
+        else:
             try:
                 await app.bot.send_message(target, "⛔ ᴀᴄᴄᴇꜱꜱ ᴅᴇɴɪᴇᴅ")
             except Exception:
                 pass
-            return
 
     @bot.on_callback_query(filters.regex("^rmt:"))
     async def _rm_cb(_, cb):
@@ -71,9 +87,7 @@ def wire(app) -> None:
             await app.tenants.revoke(target, by=uid)
             try:
                 await cb.edit_message_text(
-                    f"🗑 ᴛᴇɴᴀɴᴛ ʀᴇᴍᴏᴠᴇᴅ\n"
-                    f"  ɪᴅ: {target}\n"
-                    f"  ʙʏ: {uid}"
+                    f"🗑 ᴛᴇɴᴀɴᴛ ʀᴇᴍᴏᴠᴇᴅ\n  ɪᴅ: {target}\n  ʙʏ: {uid}"
                 )
             except Exception:
                 pass
@@ -134,7 +148,6 @@ def wire(app) -> None:
         parts = m.text.split()
         if len(parts) < 2:
             return await m.reply("Usage: /rmtenant <tg_id>")
-
         try:
             target = int(parts[1])
         except ValueError:

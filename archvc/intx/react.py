@@ -96,3 +96,43 @@ async def distribute(accounts, url: str, mapping: dict) -> dict:
         for k, v in errs.items():
             print(f"[react] {v}x {k}", flush=True)
     return {"ok": ok, "fail": fail, "errors": errs}
+
+
+SAFE_EMOJIS = ["👍", "❤️", "🔥", "🎉", "👏", "😁", "🥰", "🤔", "🙏"]
+
+
+async def random_burst(accounts, url: str, pool=None) -> dict:
+    import random as _random
+    chat, mid = parse_url(url)
+    if not mid:
+        return {"ok": 0, "fail": 0, "error": "bad_url"}
+    pool = pool or SAFE_EMOJIS
+    clients = list(accounts.live.values())
+    ok = 0
+    fail = 0
+    errs = {}
+
+    async def one(c):
+        nonlocal ok, fail
+        e = _random.choice(pool)
+        try:
+            await c.send_reaction(chat, mid, e)
+            ok += 1
+        except Exception as ex:
+            if _is_already(ex):
+                ok += 1
+                return
+            fail += 1
+            k = f"{type(ex).__name__}: {str(ex)[:80]}"
+            errs[k] = errs.get(k, 0) + 1
+
+    tasks = []
+    for c in clients:
+        tasks.append(asyncio.create_task(one(c)))
+        await asyncio.sleep(0.3)
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    if errs:
+        for k, v in errs.items():
+            print(f"[react] {v}x {k}", flush=True)
+    return {"ok": ok, "fail": fail, "errors": errs}
