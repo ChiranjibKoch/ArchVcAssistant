@@ -63,6 +63,43 @@ def wire(app) -> None:
             else:
                 await m.reply(res)
 
+        elif state == "sd:add":
+            try:
+                tg = int(text.strip())
+            except ValueError:
+                app.nav.set(uid, state)
+                return await m.reply("Bad id. Send numeric Telegram ID.")
+            added = await app.sudo.add(tg, by=uid)
+            if not added:
+                return await m.reply(f"Already owner or sudo: {tg}")
+            await app.log.event(
+                f"◈ ꜱᴜᴅᴏ ᴀᴅᴅᴇᴅ\n  id: {tg}\n  by: {uid}"
+            )
+            try:
+                await app.bot.send_message(
+                    tg,
+                    "✅ ʏᴏᴜ'ᴠᴇ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ ᴀꜱ ꜱᴜᴅᴏ\n"
+                    "━━━━━━━━━━━━━━━━━━━━\n\n"
+                    "ꜱᴇɴᴅ /start ᴛᴏ ᴏᴘᴇɴ ᴛʜᴇ ᴍᴇɴᴜ.",
+                )
+            except Exception:
+                pass
+            await m.reply(f"✅ Added sudo: {tg}")
+
+        elif state == "sd:rm":
+            try:
+                tg = int(text.strip())
+            except ValueError:
+                app.nav.set(uid, state)
+                return await m.reply("Bad id. Send numeric Telegram ID.")
+            ok = await app.sudo.drop(tg)
+            if not ok:
+                return await m.reply(f"Can't remove: {tg} (owner or not found)")
+            await app.log.event(
+                f"◈ ꜱᴜᴅᴏ ʀᴇᴍᴏᴠᴇᴅ\n  id: {tg}\n  by: {uid}"
+            )
+            await m.reply(f"✅ Removed sudo: {tg}")
+
         elif state == "vc:join":
             chat = _chat(text)
             await m.reply("Joining...")

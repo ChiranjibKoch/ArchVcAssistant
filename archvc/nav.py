@@ -368,6 +368,37 @@ def mount(app) -> None:
                 kbd.back("autoview"),
             )
 
+        elif data == "sd:list":
+            rows = await app.sudo.all()
+            owners = [r for r in rows if r.get("role") == "owner"]
+            sudos = [r for r in rows if r.get("role") != "owner"]
+            lines = ["👥 ꜱᴜᴅᴏ", "━━━━━━━━━━━━━━━━━━━━"]
+            lines.append(f"  ᴏᴡɴᴇʀꜱ: {len(owners)}")
+            for r in owners:
+                lines.append(f"    👑 {r['tg_id']}")
+            lines.append(f"  ꜱᴜᴅᴏꜱ:  {len(sudos)}")
+            for r in sudos:
+                lines.append(f"    • {r['tg_id']}")
+            await _edit(cb, "\n".join(lines), kbd.sudo())
+
+        elif data == "sd:add":
+            nav.set(uid, "sd:add")
+            await _edit(
+                cb,
+                "👥 ᴀᴅᴅ ꜱᴜᴅᴏ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ:",
+                kbd.back("sd"),
+            )
+
+        elif data == "sd:rm":
+            nav.set(uid, "sd:rm")
+            await _edit(
+                cb,
+                "👥 ʀᴇᴍᴏᴠᴇ ꜱᴜᴅᴏ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ:",
+                kbd.back("sd"),
+            )
+
 
 async def _safe_answer(cb) -> None:
     try:
