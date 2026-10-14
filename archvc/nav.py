@@ -420,6 +420,51 @@ def mount(app) -> None:
                 kbd.back("root"),
             )
 
+        elif data == "nav:views":
+            nav.state.pop(uid, None)
+            await _edit(cb, await _vw_text(app), kbd.views_menu())
+
+        elif data == "nav:views:manual":
+            nav.set(uid, "views:manual")
+            await _edit(
+                cb,
+                "📈 ᴍᴀɴᴜᴀʟ ᴠɪᴇᴡꜱ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴘᴏꜱᴛ ᴜʀʟ\n\n"
+                "ᴇx: https://t.me/channel/123",
+                kbd.back("root"),
+            )
+
+        elif data == "nav:views:auto":
+            nav.set(uid, "views:auto")
+            await _edit(
+                cb,
+                "🔁 ᴀᴜᴛᴏ ᴠɪᴇᴡꜱ\n━━━━━━━━━━━━━━━━━━━━\n\n"
+                "ꜱᴇɴᴅ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ\n\n"
+                "ʙᴏᴛ ᴍᴜꜱᴛ ʙᴇ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.\n"
+                "ᴛʜᴇɴ ᴇᴠᴇʀʏ ɴᴇᴡ ᴘᴏꜱᴛ ɢᴇᴛꜱ ᴀᴜᴛᴏ ʙᴏᴏꜱᴛ.",
+                kbd.back("root"),
+            )
+
+        elif data == "vw:status":
+            chans = app.postwatch.list_all()
+            if not chans:
+                body = "📈 ᴀᴜᴛᴏ ᴠɪᴇᴡꜱ\n━━━━━━━━━━━━━━━━━━━━\n\n  ɴᴏɴᴇ ᴡᴀᴛᴄʜᴇᴅ"
+            else:
+                lines = ["📈 ᴀᴜᴛᴏ ᴠɪᴇᴡꜱ", "━━━━━━━━━━━━━━━━━━━━"]
+                for c, cfg in chans.items():
+                    lines.append(f"  {c}")
+                    lines.append(f"    react {cfg['react_count']} · view {cfg['view_count']}")
+                body = "\n".join(lines)
+            await _edit(cb, body, kbd.views_menu())
+
+        elif data == "vw:offall":
+            n = await app.postwatch.remove_all()
+            await _edit(
+                cb,
+                f"🚫 ᴏꜰꜰ ᴀʟʟ\n━━━━━━━━━━━━━━━━━━━━\n\n  ꜱᴛᴏᴘᴘᴇᴅ {n}",
+                kbd.views_menu(),
+            )
+
 
 async def _safe_answer(cb) -> None:
     try:
@@ -487,4 +532,17 @@ async def _av_text(app) -> str:
         short = url if len(url) < 40 else url[:37] + "..."
         lines.append(f"  {short}")
         lines.append(f"    {cfg['interval']}s · {cfg['count']}/cycle")
+    return "\n".join(lines)
+
+async def _vw_text(app) -> str:
+    chans = app.postwatch.list_all()
+    if not chans:
+        return "📈 ᴠɪᴇᴡꜱ\n━━━━━━━━━━━━━━━━━━━━\n\n  ɴᴏ ᴀᴜᴛᴏ ᴡᴀᴛᴄʜᴇʀꜱ"
+    lines = ["📈 ᴠɪᴇᴡꜱ", "━━━━━━━━━━━━━━━━━━━━"]
+    lines.append(f"  ᴀᴜᴛᴏ: {len(chans)} ᴄʜᴀɴɴᴇʟꜱ")
+    for c, cfg in chans.items():
+        lines.append(f"    {c}")
+    lines.append("")
+    lines.append("  📈 ᴍᴀɴᴜᴀʟ — ꜱᴇɴᴅ ᴜʀʟ")
+    lines.append("  🔁 ᴀᴜᴛᴏ — ᴡᴀᴛᴄʜ ᴄʜᴀɴɴᴇʟ")
     return "\n".join(lines)

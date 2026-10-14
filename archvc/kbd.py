@@ -27,9 +27,9 @@ def root(is_owner):
     rows = [
         [succ("➕ ᴀᴅᴅ", "nav:acc:add"), prim("📋 ᴀᴄᴄ", "nav:acc"),
          succ("🎙 ᴊᴏɪɴ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ", "nav:vc:leave")],
-        [prim("🔥 ʀx", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡ", "nav:intx:views"),
+        [prim("🔥 ʀx", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡ", "nav:views"),
          succ("⚡ ᴀʀᴛ", "nav:autoreact"), prim("👁 ᴀᴊ", "nav:autojoin")],
-        [succ("🎙 ᴠᴄʀ", "nav:vcreact"), prim("📈 ᴀᴠ", "nav:autoview"),
+        [succ("🎙 ᴠᴄʀ", "nav:vcreact"),
          succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘx", "nav:px")],
         [prim("✅ ᴀʟʟᴏᴡ", "nav:allow"), prim("📜 ʟᴏɢ", "nav:sys:logs"),
          prim("⚙ ꜱʏꜱ", "nav:sys")],
@@ -67,6 +67,16 @@ def autoview():
 def vcreact():
     return InlineKeyboardMarkup([
         [succ("🎙 ᴠᴄ ʀᴇᴀᴄᴛɪᴏɴ", "vcrt:start")],
+        [prim("◀ ʙᴀᴄᴋ", "nav:root")],
+    ])
+
+
+def views_menu():
+    return InlineKeyboardMarkup([
+        [succ("📈 ᴍᴀɴᴜᴀʟ", "nav:views:manual"),
+         succ("🔁 ᴀᴜᴛᴏ", "nav:views:auto")],
+        [prim("📊 ꜱᴛᴀᴛᴜꜱ", "vw:status"),
+         dang("🚫 ᴏꜰꜰ ᴀʟʟ", "vw:offall")],
         [prim("◀ ʙᴀᴄᴋ", "nav:root")],
     ])
 

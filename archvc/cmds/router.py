@@ -104,6 +104,46 @@ def wire(app) -> None:
             from archvc.cmds.vcreact_cmd import _do
             await _do(app, m, _chat(text))
 
+        elif state == "views:manual":
+            from archvc.intx import views
+            url = text.strip()
+            await m.reply("Boosting... (this takes 2-5 min)")
+            res = await views.boost(app.herd, url, 40)
+            body = (
+                "📈 ᴠɪᴇᴡꜱ\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"  ok:   {res['ok']}\n"
+                f"  fail: {res['fail']}"
+            )
+            errs = res.get("errors") or {}
+            for k, v in list(errs.items())[:3]:
+                body += f"\n  {v}x {k[:100]}"
+            await m.reply(body)
+
+        elif state == "views:auto":
+            chat = _chat(text)
+            try:
+                me = await app.bot.get_me()
+                member = await app.bot.get_chat_member(chat, me.id)
+                from pyrogram.enums import ChatMemberStatus
+                if member.status not in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER):
+                    return await m.reply(
+                        "⛔ ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ\n"
+                        f"  ᴄʜᴀɴɴᴇʟ: {chat}\n"
+                        "  ᴀᴅᴅ ʙᴏᴛ ᴀꜱ ᴀᴅᴍɪɴ ꜰɪʀꜱᴛ."
+                    )
+            except Exception as e:
+                return await m.reply(f"❌ ᴄᴀɴ'ᴛ ᴄʜᴇᴄᴋ: {e}")
+
+            await app.postwatch.add(chat)
+            await m.reply(
+                "🔁 ᴀᴜᴛᴏ ᴠɪᴇᴡꜱ ᴏɴ\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"  ᴄʜᴀɴɴᴇʟ:  {chat}\n"
+                "  ᴡᴀᴛᴄʜɪɴɢ ꜰᴏʀ ɴᴇᴡ ᴘᴏꜱᴛꜱ\n"
+                "  ᴏɴ ᴘᴏꜱᴛ: 30 ʀᴇᴀᴄᴛ + 100 ᴠɪᴇᴡ"
+            )
+
         elif state == "vc:join":
             chat = _chat(text)
             await m.reply("Joining...")
