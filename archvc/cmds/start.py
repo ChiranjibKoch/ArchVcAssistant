@@ -137,8 +137,15 @@ async def _notify_owners(app, rec, requester_id: int) -> None:
     for owner_id in app.sudo.owners:
         try:
             await app.bot.send_message(owner_id, text, reply_markup=kb)
-        except Exception:
-            pass
+            print(f"[approval] sent to owner {owner_id}", flush=True)
+        except Exception as e:
+            print(f"[approval] FAIL owner {owner_id}: {type(e).__name__}: {e}", flush=True)
+            try:
+                await app.log.event(
+                    f"⚠ ᴀᴘᴘʀᴏᴠᴀʟ ᴅᴍ ꜰᴀɪʟ\n  owner: {owner_id}\n  err: {type(e).__name__}"
+                )
+            except Exception:
+                pass
 
 
 async def _show_owner(app, m, uid: int) -> None:

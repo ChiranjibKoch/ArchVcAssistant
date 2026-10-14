@@ -1,7 +1,9 @@
 from pyrogram import filters
 
+from archvc.gate import deny_msg
 from archvc.intx import react, views
-from archvc.gate import deny_cb, deny_msg
+
+SAFE_EMOJIS = ["👍", "❤️", "🔥", "🎉", "👏", "😁", "🥰", "🤔", "🙏"]
 
 
 def wire(app) -> None:
@@ -14,11 +16,27 @@ def wire(app) -> None:
             return await deny_msg(m)
         parts = m.text.split()
         if len(parts) < 3:
-            return await m.reply("Usage: /rx <post_url> <emoji>")
+            return await m.reply(
+                "Usage: /rx <post_url> <emoji>\n"
+                f"Safe emojis: {' '.join(SAFE_EMOJIS)}"
+            )
         url, emoji = parts[1], parts[2]
+        if emoji not in SAFE_EMOJIS:
+            return await m.reply(
+                f"❌ {emoji} not allowed for non-premium accounts\n"
+                f"Safe set: {' '.join(SAFE_EMOJIS)}"
+            )
+        await m.reply("Sending...")
         res = await react.burst(app.herd, url, emoji)
-        await m.reply("Reactions: " + str(res["ok"]) + " ok / " + str(res["fail"]) + " fail")
-        await app.log.event("\u25a3 \u0280\u1d07\u1d00\u1d04\u1d1b\u026a\u1d0f\u0274\u0455 \u0455\u1d07\u0274\u1d1b\n  post: " + url + "\n  emoji: " + emoji + "\n  ok: " + str(res["ok"]) + " | fail: " + str(res["fail"]) + "\n  by: " + str(uid))
+        body = f"Reactions: {res['ok']} ok / {res['fail']} fail"
+        errs = res.get("errors") or {}
+        for k, v in list(errs.items())[:3]:
+            body += f"\n  {v}x  {k[:120]}"
+        await m.reply(body)
+        await app.log.event(
+            f"▣ ʀᴇᴀᴄᴛɪᴏɴꜱ ꜱᴇɴᴛ\n  post: {url}\n  emoji: {emoji}\n"
+            f"  ok: {res['ok']} | fail: {res['fail']}\n  by: {uid}"
+        )
 
     @bot.on_message(filters.command("views") & filters.private)
     async def _vw(_, m):
@@ -34,6 +52,19 @@ def wire(app) -> None:
         except ValueError:
             return await m.reply("Bad count.")
         emoji = parts[3] if len(parts) > 3 else None
+        if emoji and emoji not in SAFE_EMOJIS:
+            return await m.reply(
+                f"❌ {emoji} not allowed\n"
+                f"Safe set: {' '.join(SAFE_EMOJIS)}"
+            )
+        await m.reply("Boosting...")
         res = await views.boost(app.herd, url, n, react=emoji)
-        await m.reply("Views: " + str(res["ok"]) + " ok / " + str(res["fail"]) + " fail")
-        await app.log.event("\u25a3 \u1d20\u026a\u1d07\u1d21\u0455 \u1d00\u1d05\u1d05\u1d07\u1d05\n  post: " + url + "\n  target: " + str(n) + " | ok: " + str(res["ok"]) + "\n  by: " + str(uid))
+        body = f"Views: {res['ok']} ok / {res['fail']} fail"
+        errs = res.get("errors") or {}
+        for k, v in list(errs.items())[:3]:
+            body += f"\n  {v}x  {k[:120]}"
+        await m.reply(body)
+        await app.log.event(
+            f"▣ ᴠɪᴇᴡꜱ ᴀᴅᴅᴇᴅ\n  post: {url}\n"
+            f"  target: {n} | ok: {res['ok']}\n  by: {uid}"
+        )

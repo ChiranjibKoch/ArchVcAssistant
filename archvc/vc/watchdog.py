@@ -7,7 +7,7 @@ class Watchdog:
     def __init__(self, calls, log) -> None:
         self.calls = calls
         self.log = log
-        self.watch: dict[int, set[str]] = {}
+        self.watch: dict[int, dict] = {}
         self._task: asyncio.Task | None = None
 
     def start(self) -> None:
@@ -23,11 +23,10 @@ class Watchdog:
                 pass
             self._task = None
 
-    def watch_chat(self, chat: int) -> int:
-        aids = set(self.calls.live.keys())
-        self.watch[chat] = aids
+    def watch_chat(self, chat: int, mute: bool = True) -> int:
+        self.watch[chat] = {"mute": mute}
         self.start()
-        return len(aids)
+        return len(self.calls.live)
 
     def unwatch(self, chat: int) -> bool:
         return self.watch.pop(chat, None) is not None
@@ -42,31 +41,33 @@ class Watchdog:
 
     def status(self) -> dict:
         out = {}
-        for chat, aids in self.watch.items():
+        for chat, cfg in self.watch.items():
+            total = len(self.calls.live)
             inside = sum(
-                1 for a in aids if chat in self.calls.joined.get(a, set())
+                1 for a in self.calls.live
+                if chat in self.calls.joined.get(a, set())
             )
-            out[chat] = {"should": len(aids), "in": inside}
+            out[chat] = {"should": total, "in": inside}
         return out
 
     async def _loop(self) -> None:
         while True:
             try:
                 await self._heal()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[autojoin] heal error: {type(e).__name__}: {e}", flush=True)
             await asyncio.sleep(CHECK_INTERVAL)
 
     async def _heal(self) -> None:
-        for chat, aids in list(self.watch.items()):
+        for chat, cfg in list(self.watch.items()):
             missing = [
-                aid for aid in aids
-                if aid in self.calls.live
-                and chat not in self.calls.joined.get(aid, set())
+                aid for aid in self.calls.live
+                if chat not in self.calls.joined.get(aid, set())
             ]
             if not missing:
                 continue
-            jobs = [(aid, self._rejoin(aid, chat)) for aid in missing]
+            print(f"[autojoin] {chat}: healing {len(missing)}/{len(self.calls.live)}", flush=True)
+            jobs = [(aid, self._rejoin(aid, chat, cfg["mute"])) for aid in missing]
             res = await self.calls.q.fire(jobs)
             ok = sum(1 for v in res.values() if v == "ok")
             if ok:
@@ -75,7 +76,7 @@ class Watchdog:
                     f"  healed: {ok}/{len(missing)}"
                 )
 
-    def _rejoin(self, aid: str, chat: int):
+    def _rejoin(self, aid: str, chat: int, mute: bool):
         async def _f():
-            await self.calls.join_one(aid, chat)
+            await self.calls.join_one(aid, chat, mute)
         return _f

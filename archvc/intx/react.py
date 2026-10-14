@@ -3,6 +3,25 @@ import asyncio
 from archvc.intx.views import parse_url
 
 
+def _is_already(exc: Exception) -> bool:
+    s = str(exc).lower()
+    name = type(exc).__name__.lower()
+    return (
+        "already" in s
+        or "reaction_already" in name
+        or "reactionalready" in name
+    )
+
+
+async def swap_reaction(client, chat, mid, emoji):
+    try:
+        await client.send_reaction(chat, mid, None)
+        await asyncio.sleep(0.3)
+    except Exception:
+        pass
+    await client.send_reaction(chat, mid, emoji)
+
+
 async def burst(accounts, url: str, emoji: str, limit=None) -> dict:
     chat, mid = parse_url(url)
     if not mid:
@@ -12,17 +31,31 @@ async def burst(accounts, url: str, emoji: str, limit=None) -> dict:
         clients = clients[:limit]
     ok = 0
     fail = 0
+    errs = {}
 
     async def one(c):
         nonlocal ok, fail
         try:
             await c.send_reaction(chat, mid, emoji)
             ok += 1
-        except Exception:
+        except Exception as ex:
+            if _is_already(ex):
+                ok += 1
+                return
             fail += 1
+            k = f"{type(ex).__name__}: {str(ex)[:80]}"
+            errs[k] = errs.get(k, 0) + 1
 
-    await asyncio.gather(*(one(c) for c in clients))
-    return {"ok": ok, "fail": fail}
+    tasks = []
+    for c in clients:
+        tasks.append(asyncio.create_task(one(c)))
+        await asyncio.sleep(0.3)
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    if errs:
+        for k, v in errs.items():
+            print(f"[react] {v}x {k}", flush=True)
+    return {"ok": ok, "fail": fail, "errors": errs}
 
 
 async def distribute(accounts, url: str, mapping: dict) -> dict:
@@ -46,11 +79,19 @@ async def distribute(accounts, url: str, mapping: dict) -> dict:
             await c.send_reaction(chat, mid, e)
             ok += 1
         except Exception as ex:
+            if _is_already(ex):
+                ok += 1
+                return
             fail += 1
-            key = f"{type(ex).__name__}: {str(ex)[:60]}"
-            errs[key] = errs.get(key, 0) + 1
+            k = f"{type(ex).__name__}: {str(ex)[:80]}"
+            errs[k] = errs.get(k, 0) + 1
 
-    await asyncio.gather(*(one(c, e) for c, e in jobs))
+    tasks = []
+    for c, e in jobs:
+        tasks.append(asyncio.create_task(one(c, e)))
+        await asyncio.sleep(0.3)
+    await asyncio.gather(*tasks, return_exceptions=True)
+
     if errs:
         for k, v in errs.items():
             print(f"[react] {v}x {k}", flush=True)
