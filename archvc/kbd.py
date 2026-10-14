@@ -25,17 +25,24 @@ def dang(label, data):
 
 def root(is_owner):
     rows = [
-        [succ("➕ ᴀᴅᴅ", "nav:acc:add"), prim("📋 ᴀᴄᴄ", "nav:acc"),
-         succ("🎙 ᴊᴏɪɴ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ", "nav:vc:leave")],
-        [prim("🔥 ʀx", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡ", "nav:views"),
-         succ("⚡ ᴀʀᴛ", "nav:autoreact"), prim("👁 ᴀᴊ", "nav:autojoin")],
-        [succ("🎙 ᴠᴄʀ", "nav:vcreact"),
-         succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘx", "nav:px")],
-        [prim("✅ ᴀʟʟᴏᴡ", "nav:allow"), prim("📜 ʟᴏɢ", "nav:sys:logs"),
-         prim("⚙ ꜱʏꜱ", "nav:sys")],
+        [succ("ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", "nav:acc:add"),
+         prim("ᴍʏ ᴀᴄᴄᴏᴜɴᴛꜱ", "nav:acc"),
+         succ("ᴊᴏɪɴ ᴠᴄ", "nav:vc:join")],
+        [dang("ʟᴇᴀᴠᴇ ᴠᴄ", "nav:vc:leave"),
+         prim("ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx"),
+         prim("ᴠɪᴇᴡꜱ", "nav:views")],
+        [succ("ᴀᴜᴛᴏ ʀᴇᴀᴄᴛ", "nav:autoreact"),
+         prim("ᴀᴜᴛᴏ ᴊᴏɪɴ", "nav:autojoin"),
+         succ("ᴠᴄ ʀᴇᴀᴄᴛ", "nav:vcreact")],
+        [succ("ᴘʟᴀʏ", "nav:vc:play"),
+         prim("ᴘʀᴏxʏ", "nav:px"),
+         prim("ᴀʟʟᴏᴡ ʟɪꜱᴛ", "nav:allow")],
+        [prim("ʟᴏɢꜱ", "nav:sys:logs"),
+         prim("ꜱᴇᴛᴛɪɴɢꜱ", "nav:sys"),
+         prim("ꜱᴜᴅᴏ", "nav:sd") if is_owner else prim("​", "nav:root")],
     ]
-    if is_owner:
-        rows.append([prim("👥 ꜱᴜᴅᴏ", "nav:sd")])
+    if not is_owner:
+        rows[4] = [prim("ʟᴏɢꜱ", "nav:sys:logs"), prim("ꜱᴇᴛᴛɪɴɢꜱ", "nav:sys")]
     return InlineKeyboardMarkup(rows)
 
 
