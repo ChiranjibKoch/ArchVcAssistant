@@ -25,14 +25,14 @@ def dang(label, data):
 
 def root(is_owner):
     rows = [
-        [succ("➕ ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", "nav:acc:add"), prim("📋 ᴀᴄᴄᴏᴜɴᴛꜱ", "nav:acc")],
-        [succ("🎙 ᴊᴏɪɴ ᴠᴄ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ ᴠᴄ", "nav:vc:leave")],
-        [prim("🔥 ʀᴇᴀᴄᴛɪᴏɴꜱ", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡꜱ", "nav:intx:views")],
-        [succ("⚡ ᴀᴜᴛᴏʀᴇᴀᴄᴛ", "nav:autoreact"), prim("👁 ᴀᴜᴛᴏᴊᴏɪɴ", "nav:autojoin")],
-        [succ("🎙 ᴠᴄ ʀᴇᴀᴄᴛ", "nav:vcreact"), prim("📈 ᴀᴜᴛᴏᴠɪᴇᴡ", "nav:autoview")],
-        [prim("📈 ᴀᴜᴛᴏᴠɪᴇᴡ", "nav:autoview"), prim("✅ ᴀʟʟᴏᴡ", "nav:allow")],
-        [succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘʀᴏxʏ", "nav:px")],
-        [prim("📜 ʟᴏɢꜱ", "nav:sys:logs"), prim("⚙ ꜱʏꜱᴛᴇᴍ", "nav:sys")],
+        [succ("➕ ᴀᴅᴅ", "nav:acc:add"), prim("📋 ᴀᴄᴄ", "nav:acc"),
+         succ("🎙 ᴊᴏɪɴ", "nav:vc:join"), dang("🔇 ʟᴇᴀᴠᴇ", "nav:vc:leave")],
+        [prim("🔥 ʀx", "nav:intx:rx"), prim("👁 ᴠɪᴇᴡ", "nav:intx:views"),
+         succ("⚡ ᴀʀᴛ", "nav:autoreact"), prim("👁 ᴀᴊ", "nav:autojoin")],
+        [succ("🎙 ᴠᴄʀ", "nav:vcreact"), prim("📈 ᴀᴠ", "nav:autoview"),
+         succ("🎵 ᴘʟᴀʏ", "nav:vc:play"), prim("🌐 ᴘx", "nav:px")],
+        [prim("✅ ᴀʟʟᴏᴡ", "nav:allow"), prim("📜 ʟᴏɢ", "nav:sys:logs"),
+         prim("⚙ ꜱʏꜱ", "nav:sys")],
     ]
     if is_owner:
         rows.append([prim("👥 ꜱᴜᴅᴏ", "nav:sd")])
