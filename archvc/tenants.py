@@ -18,13 +18,8 @@ class Tenants:
             "tg_id": tg_id,
             "username": username,
             "name": first_name,
-            "tenant": None,
             "status": "pending",
             "requested_at": datetime.now(timezone.utc),
-            "approved_at": None,
-            "approved_by": None,
-            "rejected_at": None,
-            "rejected_by": None,
         }
         await self.db.tenants.insert_one(rec)
         return rec
