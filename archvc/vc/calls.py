@@ -165,15 +165,29 @@ class Calls:
         return len(self.live)
 
 
-async def _ensure_member(client, chat) -> None:
+async def _ensure_member(client, chat):
+    """Ensure the client is member of the chat. Returns (resolved_id, err)."""
     if client is None:
-        return
+        return None, "no client"
+    from archvc.vc import chat as chat_parser
+    kind, value = chat_parser.parse(chat)
+    if not kind:
+        return None, "bad chat"
+
+    join_arg = chat_parser.to_link(kind, value)
+
     try:
-        await client.join_chat(chat)
+        result = await client.join_chat(join_arg)
+        return result.id, None
     except UserAlreadyParticipant:
-        pass
-    except Exception:
-        pass
+        try:
+            info = await client.get_chat(join_arg)
+            return info.id, None
+        except Exception as e:
+            return None, f"resolve: {type(e).__name__}: {str(e)[:100]}"
+    except Exception as e:
+        return None, f"join: {type(e).__name__}: {str(e)[:120]}"
+
 
 
 def _is_already_joined(exc: Exception) -> bool:
@@ -208,9 +222,12 @@ async def _do_join(call, chat) -> None:
 
 def _join(call, client, chat, mute):
     async def _f():
-        await _ensure_member(client, chat)
+        resolved, err = await _ensure_member(client, chat)
+        if err:
+            raise ValueError(f"join_chat: {err}")
+        target = resolved if resolved else chat
         try:
-            await _do_join(call, chat)
+            await _do_join(call, target)
         except Exception as e:
             if _is_already_joined(e):
                 pass
@@ -220,7 +237,7 @@ def _join(call, client, chat, mute):
                 raise
         if mute:
             try:
-                await call.mute(chat)
+                await call.mute(target)
             except Exception:
                 pass
     return _f

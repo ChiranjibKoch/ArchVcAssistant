@@ -2,7 +2,6 @@ from pyrogram import filters
 
 from archvc.acct import scope as sc
 from archvc.gate import deny_msg
-from archvc.intx import vcreact
 
 
 def wire(app) -> None:
@@ -14,12 +13,31 @@ def wire(app) -> None:
         sp = await sc.resolve(app, uid)
         if not sp:
             return await deny_msg(m)
-        parts = m.text.split()
+        parts = m.text.split(maxsplit=1)
         if len(parts) < 2:
-            return await m.reply("Usage: /joinvc <chat>")
-        chat = _chat(parts[1])
-        await m.reply("Joining...")
-        res = await app.calls.join_scoped(chat, sp)
+            return await m.reply(
+                "Usage: /joinvc <chat>\n"
+                "Formats accepted:\n"
+                "  @username\n"
+                "  -1001234567890\n"
+                "  https://t.me/username\n"
+                "  https://t.me/+invitehash\n"
+                "  https://t.me/username?livestream"
+            )
+        chat_input = parts[1].strip()
+
+        await m.reply("checking...")
+        h = await app.calls.precheck(app.bot, chat_input)
+        if h.get("error"):
+            return await m.reply(
+                "⛔ ᴄᴀɴ'ᴛ ᴊᴏɪɴ\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"  chat: {chat_input}\n"
+                f"  {h['error']}"
+            )
+
+        await m.reply(f"Joining {h.get('id')}...")
+        res = await app.calls.join_scoped(chat_input, sp)
         ok = sum(1 for v in res.values() if v == "ok")
         fail = len(res) - ok
         body = f"Join: {ok} ok / {fail} fail"
@@ -31,7 +49,7 @@ def wire(app) -> None:
             body += f"\n  {n}x  {e[:150]}"
         await m.reply(body)
         await app.log.event(
-            f"▣ ᴠᴄ ᴊᴏɪɴ\n  chat: {chat}\n  scope: {sp}\n"
+            f"▣ ᴠᴄ ᴊᴏɪɴ\n  chat: {h.get('id') or chat_input}\n  scope: {sp}\n"
             f"  ok: {ok} | fail: {fail}\n  by: {uid}"
         )
 
@@ -41,11 +59,10 @@ def wire(app) -> None:
         sp = await sc.resolve(app, uid)
         if not sp:
             return await deny_msg(m)
-        parts = m.text.split()
+        parts = m.text.split(maxsplit=1)
         if len(parts) < 2:
             return await m.reply("Usage: /leavevc <chat>")
-        chat = _chat(parts[1])
-        res = await app.calls.leave_scoped(chat, sp)
+        res = await app.calls.leave_scoped(parts[1].strip(), sp)
         ok = sum(1 for v in res.values() if v == "ok")
         await m.reply(f"Leave: {ok} ok / {len(res) - ok} fail")
 
@@ -58,13 +75,12 @@ def wire(app) -> None:
         parts = m.text.split(maxsplit=2)
         if len(parts) < 3:
             return await m.reply("Usage: /play <chat> <source>")
-        chat = _chat(parts[1])
         from archvc.vc import media
         try:
             url = await media.resolve_async(parts[2])
         except Exception as e:
             return await m.reply(f"Resolve failed: {e}")
-        res = await app.calls.play_all_scoped(chat, url, sp)
+        res = await app.calls.play_all_scoped(parts[1].strip(), url, sp)
         ok = sum(1 for v in res.values() if v == "ok")
         await m.reply(f"Play: {ok} ok / {len(res) - ok} fail")
 
@@ -74,10 +90,10 @@ def wire(app) -> None:
         sp = await sc.resolve(app, uid)
         if not sp:
             return await deny_msg(m)
-        parts = m.text.split()
+        parts = m.text.split(maxsplit=1)
         if len(parts) < 2:
             return
-        await app.calls.mute_scoped(_chat(parts[1]), sp)
+        await app.calls.mute_scoped(parts[1].strip(), sp)
         await m.reply("Muted.")
 
     @bot.on_message(filters.command("unmute") & filters.private)
@@ -86,15 +102,8 @@ def wire(app) -> None:
         sp = await sc.resolve(app, uid)
         if not sp:
             return await deny_msg(m)
-        parts = m.text.split()
+        parts = m.text.split(maxsplit=1)
         if len(parts) < 2:
             return
-        await app.calls.unmute_scoped(_chat(parts[1]), sp)
+        await app.calls.unmute_scoped(parts[1].strip(), sp)
         await m.reply("Unmuted.")
-
-
-def _chat(s: str):
-    try:
-        return int(s)
-    except ValueError:
-        return s
