@@ -6,7 +6,7 @@ ADMIN_STATES = (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
 
 
 def pick_client(calls):
-    for aid, c in calls.live.items():
+    for aid, c in calls.clients.items():
         return c
     return None
 
