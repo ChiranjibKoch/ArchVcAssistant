@@ -43,7 +43,7 @@ class Calls:
         self.joined.clear()
 
     async def precheck(self, bot, chat) -> dict:
-        return await health.check(bot, chat)
+        return await health.check(self, chat)
 
     async def join(self, chat, mute: bool = True) -> dict:
         jobs = [

@@ -5,48 +5,55 @@ from archvc.vc import chat as chat_parser
 ADMIN_STATES = (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
 
 
-async def _resolve(bot, chat):
-    kind, value = chat_parser.parse(chat)
-    if not kind:
-        return None, "bad chat input"
-    try:
-        if kind == "invite":
-            info = await bot.get_chat(f"https://t.me/+{value}")
-        elif kind == "username":
-            info = await bot.get_chat(f"@{value}")
-        else:
-            info = await bot.get_chat(value)
-        return info, None
-    except Exception as e:
-        return None, f"resolve: {type(e).__name__}: {str(e)[:120]}"
+def pick_client(calls):
+    for aid, c in calls.live.items():
+        return c
+    return None
 
 
-async def check(bot, chat) -> dict:
-    out = {"chat": chat, "id": None, "admin": False, "active": False,
+async def check_via_client(client, chat) -> dict:
+    out = {"chat": chat, "id": None, "active": False,
            "not_empty": False, "error": None}
 
-    info, err = await _resolve(bot, chat)
-    if err:
-        out["error"] = err
+    kind, value = chat_parser.parse(chat)
+    if not kind:
+        out["error"] = "bad chat input"
         return out
+
+    arg = chat_parser.to_link(kind, value)
+
+    # try resolve
+    try:
+        info = await client.get_chat(arg)
+    except Exception as e:
+        # try join first
+        try:
+            info = await client.join_chat(arg)
+        except Exception as e2:
+            msg = str(e2).lower()
+            if "already" in msg:
+                try:
+                    info = await client.get_chat(arg)
+                except Exception as e3:
+                    out["error"] = f"resolve: {type(e3).__name__}: {str(e3)[:120]}"
+                    return out
+            else:
+                out["error"] = f"resolve: {type(e2).__name__}: {str(e2)[:120]}"
+                return out
 
     out["id"] = info.id
-
-    try:
-        me = await bot.get_me()
-        member = await bot.get_chat_member(info.id, me.id)
-        out["admin"] = member.status in ADMIN_STATES
-    except Exception as e:
-        out["error"] = f"admin check: {type(e).__name__}: {str(e)[:100]}"
-        return out
-
-    if not out["admin"]:
-        out["error"] = "bot is not an admin in this chat"
-        return out
-
     out["active"] = bool(getattr(info, "call_active", False))
     out["not_empty"] = bool(getattr(info, "call_not_empty", False))
+
     if not out["active"]:
         out["error"] = "no active voice chat in this chat"
 
     return out
+
+
+async def check(calls, chat) -> dict:
+    """Precheck via assistant client (bot not needed)."""
+    client = pick_client(calls)
+    if client is None:
+        return {"chat": chat, "error": "no assistant accounts loaded", "id": None}
+    return await check_via_client(client, chat)
