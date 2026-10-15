@@ -12,6 +12,10 @@ def pick_client(calls):
 
 
 async def check_via_client(client, chat) -> dict:
+    from pyrogram.raw.functions.channels import GetFullChannel
+    from pyrogram.raw.functions.messages import GetFullChat
+    from pyrogram.raw.types import InputChannel, InputPeerChannel, InputPeerChat
+
     out = {"chat": chat, "id": None, "active": False,
            "not_empty": False, "error": None}
 
@@ -22,18 +26,19 @@ async def check_via_client(client, chat) -> dict:
 
     arg = chat_parser.to_link(kind, value)
 
-    # try resolve
+    # resolve peer
     try:
-        info = await client.get_chat(arg)
+        peer = await client.resolve_peer(arg)
     except Exception as e:
-        # try join first
+        # try join
         try:
-            info = await client.join_chat(arg)
+            await client.join_chat(arg)
+            peer = await client.resolve_peer(arg)
         except Exception as e2:
             msg = str(e2).lower()
             if "already" in msg:
                 try:
-                    info = await client.get_chat(arg)
+                    peer = await client.resolve_peer(arg)
                 except Exception as e3:
                     out["error"] = f"resolve: {type(e3).__name__}: {str(e3)[:120]}"
                     return out
@@ -41,13 +46,33 @@ async def check_via_client(client, chat) -> dict:
                 out["error"] = f"resolve: {type(e2).__name__}: {str(e2)[:120]}"
                 return out
 
-    out["id"] = info.id
-    out["active"] = bool(getattr(info, "call_active", False))
-    out["not_empty"] = bool(getattr(info, "call_not_empty", False))
+    out["id"] = getattr(peer, "channel_id", None) or getattr(peer, "chat_id", None)
 
-    if not out["active"]:
+    # raw full chat to get call
+    call = None
+    try:
+        if isinstance(peer, InputPeerChannel):
+            full = await client.invoke(
+                GetFullChannel(
+                    channel=InputChannel(
+                        channel_id=peer.channel_id,
+                        access_hash=peer.access_hash,
+                    )
+                )
+            )
+            call = getattr(full.full_chat, "call", None)
+        elif isinstance(peer, InputPeerChat):
+            full = await client.invoke(GetFullChat(chat_id=peer.chat_id))
+            call = getattr(full.full_chat, "call", None)
+    except Exception as e:
+        out["error"] = f"full_chat: {type(e).__name__}: {str(e)[:120]}"
+        return out
+
+    if call is None:
         out["error"] = "no active voice chat in this chat"
+        return out
 
+    out["active"] = True
     return out
 
 
