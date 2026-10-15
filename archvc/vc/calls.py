@@ -153,6 +153,17 @@ class Calls:
         jobs = [(aid, _audio(c, chat, src)) for aid, c in self.live.items() if aid in ids]
         return await self.q.fire(jobs)
 
+
+    async def pause_scoped(self, chat, scope) -> dict:
+        ids = self._ids_for_scope(scope)
+        jobs = [(aid, _pause(c, chat)) for aid, c in self.live.items() if aid in ids]
+        return await self.q.fire(jobs)
+
+    async def resume_scoped(self, chat, scope) -> dict:
+        ids = self._ids_for_scope(scope)
+        jobs = [(aid, _resume(c, chat)) for aid, c in self.live.items() if aid in ids]
+        return await self.q.fire(jobs)
+
     def _ids_for_scope(self, scope) -> set:
         if not scope:
             return set()
