@@ -82,13 +82,7 @@ def wire(app) -> None:
             if not sp:
                 return await m.reply("Not authorized.")
             chat_input = text.strip()
-            await m.reply("checking...")
-            h = await app.calls.precheck(app.bot, chat_input)
-            if h.get("error"):
-                return await m.reply(
-                    "Cannot join\nchat: " + chat_input + "\n" + str(h["error"])
-                )
-            await m.reply("Joining " + str(h.get("id")) + "...")
+            await m.reply("Joining " + chat_input + "...")
             res = await app.calls.join_scoped(chat_input, sp)
             ok = sum(1 for v in res.values() if v == "ok")
             fail = len(res) - ok
@@ -101,7 +95,7 @@ def wire(app) -> None:
                 body = body + "\n  " + str(n) + "x  " + e[:150]
             await m.reply(body)
             await app.log.event(
-                "VC JOIN\n  chat: " + str(h.get("id") or chat_input)
+                "VC JOIN\n  chat: " + chat_input
                 + "\n  ok: " + str(ok) + " | fail: " + str(fail)
                 + "\n  by: " + str(uid)
             )

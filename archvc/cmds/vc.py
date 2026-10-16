@@ -26,17 +26,7 @@ def wire(app) -> None:
             )
         chat_input = parts[1].strip()
 
-        await m.reply("checking...")
-        h = await app.calls.precheck(app.bot, chat_input)
-        if h.get("error"):
-            return await m.reply(
-                "⛔ ᴄᴀɴ'ᴛ ᴊᴏɪɴ\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
-                f"  chat: {chat_input}\n"
-                f"  {h['error']}"
-            )
-
-        await m.reply(f"Joining {h.get('id')}...")
+        await m.reply(f"Joining {chat_input}...")
         res = await app.calls.join_scoped(chat_input, sp)
         ok = sum(1 for v in res.values() if v == "ok")
         fail = len(res) - ok
