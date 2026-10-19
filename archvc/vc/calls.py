@@ -176,12 +176,6 @@ class Calls:
 
 
 async def _ensure_member(client, chat):
-    """Ensure the client is member of the chat. Returns (resolved_id, err).
-
-    Kurigram's join_chat() returns ChatJoinResult (e.g. ChatJoinResultSuccess),
-    NOT a Chat object. The success result exposes .chat_id (snake_case), not .id.
-    Standard Pyrogram returns Chat with .id. Handle both.
-    """
     if client is None:
         return None, "no client"
     from archvc.vc import chat as chat_parser
@@ -200,18 +194,14 @@ async def _ensure_member(client, chat):
     except Exception as e:
         join_err = f"{type(e).__name__}: {str(e)[:120]}"
 
-    # Extract id from whatever join_chat returned
     if result is not None:
-        # Standard Pyrogram Chat object
         rid = getattr(result, "id", None)
         if isinstance(rid, int):
             return rid, None
-        # Kurigram ChatJoinResultSuccess (chat_id) or raw TL (chatId)
         cid = getattr(result, "chat_id", None) or getattr(result, "chatId", None)
         if isinstance(cid, int):
             return cid, None
 
-    # Fallback — resolve via get_chat (works if already member, or just joined)
     try:
         info = await client.get_chat(join_arg)
         return info.id, None
