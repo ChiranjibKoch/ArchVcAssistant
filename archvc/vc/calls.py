@@ -176,7 +176,12 @@ class Calls:
 
 
 async def _ensure_member(client, chat):
-    """Ensure the client is member of the chat. Returns (resolved_id, err)."""
+    """Ensure the client is member of the chat. Returns (resolved_id, err).
+
+    Kurigram's join_chat() returns ChatJoinResult (e.g. ChatJoinResultSuccess),
+    NOT a Chat object. The success result exposes .chat_id (snake_case), not .id.
+    Standard Pyrogram returns Chat with .id. Handle both.
+    """
     if client is None:
         return None, "no client"
     from archvc.vc import chat as chat_parser
@@ -186,18 +191,34 @@ async def _ensure_member(client, chat):
 
     join_arg = chat_parser.to_link(kind, value)
 
+    join_err = None
+    result = None
     try:
         result = await client.join_chat(join_arg)
-        return result.id, None
     except UserAlreadyParticipant:
-        try:
-            info = await client.get_chat(join_arg)
-            return info.id, None
-        except Exception as e:
-            return None, f"resolve: {type(e).__name__}: {str(e)[:100]}"
+        pass
     except Exception as e:
-        return None, f"join: {type(e).__name__}: {str(e)[:120]}"
+        join_err = f"{type(e).__name__}: {str(e)[:120]}"
 
+    # Extract id from whatever join_chat returned
+    if result is not None:
+        # Standard Pyrogram Chat object
+        rid = getattr(result, "id", None)
+        if isinstance(rid, int):
+            return rid, None
+        # Kurigram ChatJoinResultSuccess (chat_id) or raw TL (chatId)
+        cid = getattr(result, "chat_id", None) or getattr(result, "chatId", None)
+        if isinstance(cid, int):
+            return cid, None
+
+    # Fallback — resolve via get_chat (works if already member, or just joined)
+    try:
+        info = await client.get_chat(join_arg)
+        return info.id, None
+    except Exception as e:
+        if join_err:
+            return None, f"join: {join_err} | resolve: {type(e).__name__}: {str(e)[:100]}"
+        return None, f"resolve: {type(e).__name__}: {str(e)[:120]}"
 
 
 def _is_already_joined(exc: Exception) -> bool:
