@@ -255,6 +255,8 @@ def _join(call, client, chat, mute):
     async def _f():
         resolved, err = await _ensure_member(client, chat)
         if err:
+            aid = getattr(client, "name", "?")
+            print(f"[join] FAIL aid={aid} chat={chat} err={err[:100]}", flush=True)
             raise ValueError(f"join_chat: {err}")
         target = resolved if resolved else chat
         try:
