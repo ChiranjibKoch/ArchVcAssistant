@@ -2,6 +2,7 @@ import traceback
 
 from archvc.cmds import (
     acc,
+    backfill_cmd,
     approve_cmd,
     autoview_cmd,
     copydb_cmd,
