@@ -118,8 +118,7 @@ class Calls:
 
 
     async def join_scoped(self, chat, scope, mute: bool = True) -> dict:
-        from archvc.acct import scope as _sc
-        aids = set(_sc.ids_for_herd(self.herd, scope)) if hasattr(_sc, "ids_for_herd") else set()
+        aids = self._ids_for_scope(scope)
         if not aids:
             return {}
         jobs = [
